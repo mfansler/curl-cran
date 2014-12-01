@@ -9,14 +9,15 @@
  *  - https://github.com/wch/r-source/blob/trunk/src/include/R_ext/Connections.h
  *  - http://biostatmatt.com/R/R-conn-ints/C-Structures.html
  *
- * Notes: the close() function in R actually calls cc->destroy. The cc->close
- * function is only used when a connection is recycled.
+ * Notes: the close() function in R actually calls con->destroy. The con->close
+ * function is only used when a connection is recycled after auto-open.
  */
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <Rinternals.h>
 #include <string.h>
 #include <stdlib.h>
+#include "utils.h"
 
 /* the RConnection API is experimental and subject to change */
 #include <R_ext/Connections.h>
@@ -28,57 +29,54 @@
 #define R_EOF -1
 
 typedef struct {
-  const char *url;
-  CURL *http_handle;
-  CURLM *multi_handle;
+  char *url;
   char *buf;
-  char *ptr;
-  size_t size;
-  size_t limit;
+  char *cur;
   int has_data;
   int has_more;
   int used;
-} curl_private;
+  size_t size;
+  size_t limit;
+  CURLM *manager;
+  CURL *handle;
+} request;
 
 /* callback function to store received data */
-static size_t push(void *contents, size_t sz, size_t nmemb, curl_private *cc) {
-  /* only needed first time */
-  cc->has_data = 1;
-  size_t realsize = sz * nmemb;
-  size_t newsize = cc->size + realsize;
+static size_t push(void *contents, size_t sz, size_t nmemb, void *ctx) {
+  /* avoids compiler warning on windows */
+  request* req = (request*) ctx;
+  req->has_data = 1;
 
-  /* move existing data to front of buffer */
-  memcpy(cc->buf, cc->ptr, cc->size);
+  /* move existing data to front of buffer (if any) */
+  memcpy(req->buf, req->cur, req->size);
 
   /* allocate more space if required */
-  if(newsize > cc->limit) {
-    //Rprintf("Resizing buffer to %d.\n", newsize);
-    void *newbuf = realloc(cc->buf, newsize + 1);
+  size_t realsize = sz * nmemb;
+  size_t newsize = req->size + realsize;
+  if(newsize > req->limit) {
+    size_t newlimit = 2 * req->limit;
+    //Rprintf("Resizing buffer to %d.\n", newlimit);
+    void *newbuf = realloc(req->buf, newlimit);
     if(!newbuf)
       error("Failure in realloc. Out of memory?");
-    cc->buf = newbuf;
-    cc->limit = newsize;
+    req->buf = newbuf;
+    req->limit = newlimit;
   }
 
   /* append new data */
-  memcpy(cc->buf + cc->size, contents, realsize);
-  cc->size = newsize;
-  cc->ptr = cc->buf;
+  memcpy(req->buf + req->size, contents, realsize);
+  req->size = newsize;
+  req->cur = req->buf;
   return realsize;
 }
 
-static size_t pop(void *target, size_t max, curl_private *cc){
-  size_t copy_size = min(cc->size, max);
-  memcpy(target, cc->ptr, copy_size);
-  cc->ptr = cc->ptr + copy_size;
-  cc->size = cc->size - copy_size;
-  //Rprintf("Requested %d bytes, popped %d bytes, new size %d bytes.\n", max, copy_size, cc->size);
+static size_t pop(void *target, size_t max, request *req){
+  size_t copy_size = min(req->size, max);
+  memcpy(target, req->cur, copy_size);
+  req->cur = req->cur + copy_size;
+  req->size = req->size - copy_size;
+  //Rprintf("Requested %d bytes, popped %d bytes, new size %d bytes.\n", max, copy_size, req->size);
   return copy_size;
-}
-
-void assert(CURLcode res){
-  if(res != CURLE_OK)
-    error(curl_easy_strerror(res));
 }
 
 void massert(CURLMcode res){
@@ -86,31 +84,32 @@ void massert(CURLMcode res){
     error(curl_multi_strerror(res));
 }
 
-void check_status(CURLM *multi_handle) {
+void check_manager(CURLM *manager) {
   for(int msg = 1; msg > 0;){
-    CURLMsg *out = curl_multi_info_read(multi_handle, &msg);
+    CURLMsg *out = curl_multi_info_read(manager, &msg);
     if(out)
       assert(out->data.result);
   }
 }
 
-void fetch(curl_private *cc) {
+void fetch(request *req) {
+  R_CheckUserInterrupt();
   long timeout = 10*1000;
-  massert(curl_multi_timeout(cc->multi_handle, &timeout));
-  massert(curl_multi_perform(cc->multi_handle, &(cc->has_more)));
-  check_status(cc->multi_handle);
+  massert(curl_multi_timeout(req->manager, &timeout));
+  massert(curl_multi_perform(req->manager, &(req->has_more)));
+  check_manager(req->manager);
 }
 
 /* Support for readBin() */
 static size_t rcurl_read(void *target, size_t sz, size_t ni, Rconnection con) {
-  curl_private *cc = (curl_private*) con->private;
+  request *req = (request*) con->private;
   size_t req_size = sz * ni;
 
   /* append data to the target buffer */
-  size_t total_size = pop(target, req_size, cc);
-  while((req_size > total_size) && cc->has_more) {
-    fetch(cc);
-    total_size += pop((char *)target + total_size, (req_size-total_size), cc);
+  size_t total_size = pop(target, req_size, req);
+  while((req_size > total_size) && req->has_more) {
+    fetch(req);
+    total_size += pop((char*)target + total_size, (req_size-total_size), req);
   }
   return total_size;
 }
@@ -123,12 +122,13 @@ static int rcurl_fgetc(Rconnection con) {
 
 void cleanup(Rconnection con) {
   //Rprintf("Destroying connection.\n");
-  curl_private *cc = (curl_private*) con->private;
-  curl_multi_remove_handle(cc->multi_handle, cc->http_handle);
-  curl_easy_cleanup(cc->http_handle);
-  curl_multi_cleanup(cc->multi_handle);
-  free(cc->buf);
-  free(cc);
+  request *req = (request*) con->private;
+  curl_multi_remove_handle(req->manager, req->handle);
+  curl_easy_cleanup(req->handle);
+  curl_multi_cleanup(req->manager);
+  free(req->buf);
+  free(req->url);
+  free(req);
 }
 
 /* reset to pre-opened state */
@@ -140,58 +140,38 @@ void reset(Rconnection con) {
 }
 
 static Rboolean rcurl_open(Rconnection con) {
-  curl_private *cc = (curl_private*) con->private;
-  //Rprintf("Opening URL:%s\n", cc->url);
+  request *req = (request*) con->private;
+  //Rprintf("Opening URL:%s\n", req->url);
 
   /* case of recycled connection */
-  if(cc->used) {
+  if(req->used) {
     //Rprintf("Cleaning up old handle.\n");
-    curl_multi_remove_handle(cc->multi_handle, cc->http_handle);
-    curl_easy_cleanup(cc->http_handle);
+    curl_multi_remove_handle(req->manager, req->handle);
+    curl_easy_cleanup(req->handle);
   }
 
-  CURL *http_handle = curl_easy_init();
-  curl_multi_add_handle(cc->multi_handle, http_handle);
+  /* init a multi stack with callback */
+  CURL *handle = make_handle(req->url);
+  curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, push);
+  curl_easy_setopt(handle, CURLOPT_WRITEDATA, req);
+  curl_multi_add_handle(req->manager, handle);
 
   /* reset the state */
-  cc->http_handle = http_handle;
-  cc->ptr = cc->buf;
-  cc->size = 0;
-  cc->used = 1;
-  cc->has_data = 0;
-  cc->has_more = 1;
-
-  /* curl configuration options */
-  curl_easy_setopt(http_handle, CURLOPT_URL, cc->url);
-  curl_easy_setopt(http_handle, CURLOPT_SSL_VERIFYHOST, 0L);
-  curl_easy_setopt(http_handle, CURLOPT_SSL_VERIFYPEER, 0L);
-  curl_easy_setopt(http_handle, CURLOPT_FOLLOWLOCATION, 1L);
-  curl_easy_setopt(http_handle, CURLOPT_CONNECTTIMEOUT_MS, 10*1000);
-  curl_easy_setopt(http_handle, CURLOPT_ACCEPT_ENCODING, "gzip, deflate");
-
-  /* set http request headers */
-  struct curl_slist *reqheaders = NULL;
-  reqheaders = curl_slist_append(reqheaders, "User-Agent: r/curl/jeroen");
-  reqheaders = curl_slist_append(reqheaders, "Accept-Charset: utf-8");
-  reqheaders = curl_slist_append(reqheaders, "Cache-Control: no-cache");
-  curl_easy_setopt(http_handle, CURLOPT_HTTPHEADER, reqheaders);
-
-  /* init a multi stack with callback */
-  curl_easy_setopt(http_handle, CURLOPT_WRITEFUNCTION, push);
-  curl_easy_setopt(http_handle, CURLOPT_WRITEDATA, cc);
+  req->handle = handle;
+  req->cur = req->buf;
+  req->size = 0;
+  req->used = 1;
+  req->has_data = 0;
+  req->has_more = 1;
 
   /* Wait for first data to arrive. Monitoring a change in status code does not
      suffice in case of http redirects */
-  while(cc->has_more && !cc->has_data) {
-    fetch(cc);
+  while(req->has_more && !req->has_data) {
+    fetch(req);
   }
 
-  long status = 0;
-  assert(curl_easy_getinfo(http_handle, CURLINFO_RESPONSE_CODE, &status));
-
-  /* check http status code. Not sure what this does for ftp. */
-  if(status >= 300)
-    error("HTTP error %d.", status);
+  /* check http status code */
+  stop_for_status(handle);
 
   /* set mode in case open() changed it */
   con->text = strcmp(con->mode, "rb") ? TRUE : FALSE;
@@ -211,18 +191,21 @@ SEXP R_curl_connection(SEXP url, SEXP mode) {
 
   /* create the R connection object */
   Rconnection con;
-  SEXP rc = R_new_custom_connection(translateCharUTF8(asChar(url)), "r", "curl", &con);
+  SEXP rc = PROTECT(R_new_custom_connection(translateCharUTF8(asChar(url)), "r", "curl", &con));
 
   /* setup curl. These are the parts that are recycable. */
-  curl_private *cc = malloc(sizeof(curl_private));
-  cc->limit = CURL_MAX_WRITE_SIZE;
-  cc->buf = malloc(cc->limit);
-  cc->url = translateCharUTF8(asChar(url));
-  cc->multi_handle = curl_multi_init();
-  cc->used = 0;
+  request *req = malloc(sizeof(request));
+  req->limit = CURL_MAX_WRITE_SIZE;
+  req->buf = malloc(req->limit);
+  req->manager = curl_multi_init();
+  req->used = 0;
+
+  /* allocate url string */
+  req->url = malloc(strlen(translateCharUTF8(asChar(url))+1));
+  strcpy(req->url, translateCharUTF8(asChar(url)));
 
   /* set connection properties */
-  con->private = cc;
+  con->private = req;
   con->canseek = FALSE;
   con->canwrite = FALSE;
   con->isopen = FALSE;
@@ -234,6 +217,7 @@ SEXP R_curl_connection(SEXP url, SEXP mode) {
   con->destroy = cleanup;
   con->read = rcurl_read;
   con->fgetc = rcurl_fgetc;
+  con->fgetc_internal = rcurl_fgetc;
 
   /* open connection  */
   const char *smode = translateCharUTF8(asChar(mode));
@@ -243,10 +227,6 @@ SEXP R_curl_connection(SEXP url, SEXP mode) {
   } else if(strcmp(smode, "")) {
     error("Invalid mode: %s", smode);
   }
+  UNPROTECT(1);
   return rc;
-}
-
-SEXP R_global_cleanup() {
-  curl_global_cleanup();
-  return R_NilValue;
 }
