@@ -1,39 +1,46 @@
-/* *
- * This is where the actual HTTP request settings are made.
- */
-#include <curl/curl.h>
-#include <curl/easy.h>
-#include <Rinternals.h>
-#include <string.h>
-#include <stdlib.h>
+#include "curl-common.h"
 
-CURL *make_handle(const char *url){
-  /* construct new handler */
-  CURL *http_handle = curl_easy_init();
+void check_interrupt_fn(void *dummy) {
+  R_CheckUserInterrupt();
+}
 
-  /* curl configuration options */
-  curl_easy_setopt(http_handle, CURLOPT_URL, url);
+int pending_interrupt() {
+  return !(R_ToplevelExec(check_interrupt_fn, NULL));
+}
 
-  //#ifdef _WIN32
-  curl_easy_setopt(http_handle, CURLOPT_SSL_VERIFYHOST, 0L);
-  curl_easy_setopt(http_handle, CURLOPT_SSL_VERIFYPEER, 0L);
-  //#endif
+CURL* get_handle(SEXP ptr){
+  if(!R_ExternalPtrAddr(ptr))
+    error("handle is dead");
+  reference *ref = (reference*) R_ExternalPtrAddr(ptr);
+  return ref->handle;
+}
 
-  curl_easy_setopt(http_handle, CURLOPT_FOLLOWLOCATION, 1L);
-  curl_easy_setopt(http_handle, CURLOPT_CONNECTTIMEOUT_MS, 10*1000);
+reference* get_ref(SEXP ptr){
+  if(!R_ExternalPtrAddr(ptr))
+    error("handle is dead");
+  reference *ref = (reference*) R_ExternalPtrAddr(ptr);
+  return ref;
+}
 
-  /* aka 'CURLOPT_ACCEPT_ENCODING' in recent versions */
-  curl_easy_setopt(http_handle, CURLOPT_ENCODING, "gzip, deflate");
+void set_form(reference *ref, struct curl_httppost* newform){
+  if(ref->form)
+    curl_formfree(ref->form);
+  ref->form = newform;
+  assert(curl_easy_setopt(ref->handle, CURLOPT_HTTPPOST, ref->form));
+}
 
-  /* set http request headers */
-  struct curl_slist *reqheaders = NULL;
-  reqheaders = curl_slist_append(reqheaders, "User-Agent: r/curl/jeroen");
-  reqheaders = curl_slist_append(reqheaders, "Accept-Charset: utf-8");
-  reqheaders = curl_slist_append(reqheaders, "Cache-Control: no-cache");
-  curl_easy_setopt(http_handle, CURLOPT_HTTPHEADER, reqheaders);
+void set_headers(reference *ref, struct curl_slist *newheaders){
+  if(ref->headers)
+    curl_slist_free_all(ref->headers);
+  ref->headers = newheaders;
+  assert(curl_easy_setopt(ref->handle, CURLOPT_HTTPHEADER, ref->headers));
+}
 
-  /*return the handler */
-  return http_handle;
+void reset_resheaders(reference *ref){
+  if(ref->resheaders.buf)
+    free(ref->resheaders.buf);
+  ref->resheaders.buf = NULL;
+  ref->resheaders.size = 0;
 }
 
 void assert(CURLcode res){
@@ -50,8 +57,59 @@ void stop_for_status(CURL *http_handle){
     error("HTTP error %d.", status);
 }
 
-SEXP R_global_cleanup() {
-  curl_global_cleanup();
-  return R_NilValue;
+/* make sure to call curl_slist_free_all on this object */
+struct curl_slist* vec_to_slist(SEXP vec){
+  if(!isString(vec))
+    error("vec is not a character vector");
+  struct curl_slist *slist = NULL;
+  for(int i = 0; i < length(vec); i++){
+    slist = curl_slist_append(slist, CHAR(STRING_ELT(vec, i)));
+  }
+  return slist;
 }
 
+SEXP slist_to_vec(struct curl_slist *slist){
+  /* linked list of strings */
+  struct curl_slist *cursor = slist;
+
+  /* count slist */
+  int n = 0;
+  while (cursor) {
+    n++;
+    cursor = cursor->next;
+  }
+
+  SEXP out = PROTECT(allocVector(STRSXP, n));
+  cursor = slist;
+  for(int i = 0; i < n; i++){
+    SET_STRING_ELT(out, i, mkChar(cursor->data));
+    cursor = cursor->next;
+  }
+  UNPROTECT(1);
+  return out;
+}
+
+size_t push_disk(void* contents, size_t sz, size_t nmemb, FILE *ctx) {
+  if (pending_interrupt())
+    return 0;
+  return fwrite(contents, sz, nmemb, ctx);
+}
+
+size_t append_buffer(void *contents, size_t sz, size_t nmemb, void *ctx) {
+  if (pending_interrupt())
+    return 0;
+
+  /* avoids compiler warning on windows */
+  size_t realsize = sz * nmemb;
+  memory *mem = (memory*) ctx;
+
+  /* increase buffer size */
+  mem->buf = realloc(mem->buf, mem->size + realsize);
+  if (!mem->buf)
+    return 0;
+
+  /* append data and increment size */
+  memcpy(&(mem->buf[mem->size]), contents, realsize);
+  mem->size += realsize;
+  return realsize;
+}

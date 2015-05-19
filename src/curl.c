@@ -12,12 +12,7 @@
  * Notes: the close() function in R actually calls con->destroy. The con->close
  * function is only used when a connection is recycled after auto-open.
  */
-#include <curl/curl.h>
-#include <curl/easy.h>
-#include <Rinternals.h>
-#include <string.h>
-#include <stdlib.h>
-#include "utils.h"
+#include "curl-common.h"
 
 /* the RConnection API is experimental and subject to change */
 #include <R_ext/Connections.h>
@@ -35,10 +30,12 @@ typedef struct {
   int has_data;
   int has_more;
   int used;
+  int stop;
   size_t size;
   size_t limit;
   CURLM *manager;
   CURL *handle;
+  reference *ref;
 } request;
 
 /* callback function to store received data */
@@ -73,8 +70,8 @@ static size_t push(void *contents, size_t sz, size_t nmemb, void *ctx) {
 static size_t pop(void *target, size_t max, request *req){
   size_t copy_size = min(req->size, max);
   memcpy(target, req->cur, copy_size);
-  req->cur = req->cur + copy_size;
-  req->size = req->size - copy_size;
+  req->cur += copy_size;
+  req->size -= copy_size;
   //Rprintf("Requested %d bytes, popped %d bytes, new size %d bytes.\n", max, copy_size, req->size);
   return copy_size;
 }
@@ -131,8 +128,14 @@ static int rcurl_fgetc(Rconnection con) {
 void cleanup(Rconnection con) {
   //Rprintf("Destroying connection.\n");
   request *req = (request*) con->private;
+
+  /* delayed finalizer cleanup */
+  reference *ref = req->ref;
+  (ref->inUse)--;
+  clean_handle(ref);
+
+  /* clean up connection */
   curl_multi_remove_handle(req->manager, req->handle);
-  curl_easy_cleanup(req->handle);
   curl_multi_cleanup(req->manager);
   free(req->buf);
   free(req->url);
@@ -141,7 +144,9 @@ void cleanup(Rconnection con) {
 
 /* reset to pre-opened state */
 void reset(Rconnection con) {
-  //Rprintf("Closing connection.\n");
+  //Rprintf("Resetting connection object.\n");
+  request *req = (request*) con->private;
+  curl_multi_remove_handle(req->manager, req->handle);
   con->isopen = FALSE;
   con->text = TRUE;
   strcpy(con->mode, "r");
@@ -151,18 +156,12 @@ static Rboolean rcurl_open(Rconnection con) {
   request *req = (request*) con->private;
   //Rprintf("Opening URL:%s\n", req->url);
 
-  /* case of recycled connection */
-  if(req->used) {
-    //Rprintf("Cleaning up old handle.\n");
-    curl_multi_remove_handle(req->manager, req->handle);
-    curl_easy_cleanup(req->handle);
-  }
-
   /* init a multi stack with callback */
-  CURL *handle = make_handle(req->url);
-  curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, push);
-  curl_easy_setopt(handle, CURLOPT_WRITEDATA, req);
-  curl_multi_add_handle(req->manager, handle);
+  CURL *handle = req->handle;
+  assert(curl_easy_setopt(handle, CURLOPT_URL, req->url));
+  assert(curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, push));
+  assert(curl_easy_setopt(handle, CURLOPT_WRITEDATA, req));
+  massert(curl_multi_add_handle(req->manager, handle));
 
   /* reset the state */
   req->handle = handle;
@@ -179,7 +178,8 @@ static Rboolean rcurl_open(Rconnection con) {
   }
 
   /* check http status code */
-  stop_for_status(handle);
+  if(req->stop)
+    stop_for_status(handle);
 
   /* set mode in case open() changed it */
   con->text = strcmp(con->mode, "rb") ? TRUE : FALSE;
@@ -187,15 +187,12 @@ static Rboolean rcurl_open(Rconnection con) {
   return TRUE;
 }
 
-SEXP R_curl_connection(SEXP url, SEXP mode) {
+SEXP R_curl_connection(SEXP url, SEXP mode, SEXP ptr, SEXP stop_on_error) {
   if(!isString(url))
     error("Argument 'url' must be string.");
 
   if(!isString(mode))
     error("Argument 'mode' must be string.");
-
-  /* maybe not be needed as curl_easy_init triggers a global_init as well  */
-  curl_global_init(CURL_GLOBAL_DEFAULT);
 
   /* create the R connection object */
   Rconnection con;
@@ -203,10 +200,13 @@ SEXP R_curl_connection(SEXP url, SEXP mode) {
 
   /* setup curl. These are the parts that are recycable. */
   request *req = malloc(sizeof(request));
+  req->handle = get_handle(ptr);
+  req->ref = get_ref(ptr);
   req->limit = CURL_MAX_WRITE_SIZE;
   req->buf = malloc(req->limit);
   req->manager = curl_multi_init();
   req->used = 0;
+  req->stop = asLogical(stop_on_error);
 
   /* allocate url string */
   req->url = malloc(strlen(translateCharUTF8(asChar(url))) + 1);
@@ -235,6 +235,10 @@ SEXP R_curl_connection(SEXP url, SEXP mode) {
   } else if(strcmp(smode, "")) {
     error("Invalid mode: %s", smode);
   }
+
+  /* lock the handle */
+  (req->ref->inUse)++;
+
   UNPROTECT(1);
   return rc;
 }

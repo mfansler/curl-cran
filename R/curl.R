@@ -1,13 +1,15 @@
-#' Curl connection
+#' Curl connection interface
 #'
-#' Drop-in replacement for url() that uses libcurl. Supports http(s), ftp(s), file,
-#' gzip, deflate, etc.
+#' Drop-in replacement for base \code{\link{url}} that supports https, ftps,
+#' gzip, deflate, etc. Default behavior is identical to \code{\link{url}}, but
+#' request can be fully configured by passing a custom \code{\link{handle}}.
 #'
 #' @useDynLib curl R_curl_connection
 #' @export
 #' @param url character string. See examples.
 #' @param open character string. How to open the connection if it should be opened
 #'   initially. Currently only "r" and "rb" are supported.
+#' @param handle a curl handle object
 #' @examples \dontrun{
 #' con <- curl("https://httpbin.org/get")
 #' readLines(con)
@@ -56,6 +58,6 @@
 #' nycflights <- stream_in(con)
 #' }
 #'
-curl <- function(url = "http://httpbin.org/get", open = ""){
-  .Call(R_curl_connection, url, open)
+curl <- function(url = "http://httpbin.org/get", open = "", handle = new_handle()){
+  .Call(R_curl_connection, url, open, handle, TRUE)
 }

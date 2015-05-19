@@ -1,25 +1,9 @@
 /* *
  * Reimplementation of C_download (the "internal" method for download.file).
- * Because the user can interrupt the download with R_CheckUserInterrupt,
- * we need to do the cleanup in a separate function.
  */
-#include <curl/curl.h>
-#include <curl/easy.h>
-#include <Rinternals.h>
-#include <string.h>
-#include <stdlib.h>
-#include "utils.h"
+#include "curl-common.h"
 
-FILE *dest;
-CURL *handle;
-
-/* callback function to store received data */
-static size_t push(void *contents, size_t sz, size_t nmemb, void *ctx) {
-  R_CheckUserInterrupt();
-  return fwrite(contents, sz, nmemb, ctx);
-}
-
-SEXP R_download_curl(SEXP url, SEXP destfile, SEXP quiet, SEXP mode) {
+SEXP R_download_curl(SEXP url, SEXP destfile, SEXP quiet, SEXP mode, SEXP ptr) {
   if(!isString(url))
     error("Argument 'url' must be string.");
 
@@ -32,34 +16,34 @@ SEXP R_download_curl(SEXP url, SEXP destfile, SEXP quiet, SEXP mode) {
   if(!isString(mode))
     error("Argument 'mode' must be string.");
 
-  /* init curl */
-  handle = make_handle(translateCharUTF8(asChar(url)));
-  curl_easy_setopt(handle, CURLOPT_NOPROGRESS, asLogical(quiet));
+  /* get the handle */
+  CURL *handle = get_handle(ptr);
 
   /* open file */
-  dest = fopen(translateCharUTF8(asChar(destfile)), CHAR(asChar(mode)));
+  FILE *dest = fopen(translateCharUTF8(asChar(destfile)), CHAR(asChar(mode)));
   if(!dest)
     error("Failed to open file %s.", translateCharUTF8(asChar(destfile)));
+
+  /* set options */
+  curl_easy_setopt(handle, CURLOPT_URL, translateCharUTF8(asChar(url)));
+  curl_easy_setopt(handle, CURLOPT_NOPROGRESS, asLogical(quiet));
+  curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, push_disk);
   curl_easy_setopt(handle, CURLOPT_WRITEDATA, dest);
 
-  /* Custom writefun only to call R_CheckUserInterrupt */
-  curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, push);
-
   /* perform blocking request */
-  CURLcode success = curl_easy_perform(handle);
-  assert(success);
+  CURLcode status = curl_easy_perform(handle);
+
+  /* cleanup */
+  curl_easy_setopt(handle, CURLOPT_URL, NULL);
+  curl_easy_setopt(handle, CURLOPT_NOPROGRESS, 1);
+  curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, NULL);
+  curl_easy_setopt(handle, CURLOPT_WRITEDATA, NULL);
+  fclose(dest);
+
+  if (status != CURLE_OK)
+    error(curl_easy_strerror(status));
+
+  /* check for success */
   stop_for_status(handle);
   return ScalarInteger(0);
-}
-
-SEXP R_download_cleanup(){
-  if(dest) {
-    fclose(dest);
-    dest = NULL;
-  }
-  if(handle){
-    curl_easy_cleanup(handle);
-    handle = NULL;
-  }
-  return R_NilValue;
 }
