@@ -14,6 +14,11 @@
  */
 #include "curl-common.h"
 
+/* defines _BIG_ENDIAN used below */
+#if (defined(__sun) && defined(__SVR4))
+#include <sys/byteorder.h>
+#endif
+
 /* the RConnection API is experimental and subject to change */
 #include <R_ext/Connections.h>
 #if ! defined(R_CONNECTIONS_VERSION) || R_CONNECTIONS_VERSION != 1
@@ -123,7 +128,11 @@ static size_t rcurl_read(void *target, size_t sz, size_t ni, Rconnection con) {
 /* naive implementation of readLines */
 static int rcurl_fgetc(Rconnection con) {
   int x = 0;
+#ifdef _BIG_ENDIAN
+  return rcurl_read(&x, 1, 1, con) ? BSWAP_32(x) : R_EOF;
+#else
   return rcurl_read(&x, 1, 1, con) ? x : R_EOF;
+#endif
 }
 
 void cleanup(Rconnection con) {
