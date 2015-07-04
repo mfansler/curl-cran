@@ -1,3 +1,8 @@
+0.9.1
+ - Convert url argument to utf8 strings in escape/unescape
+ - Endian fix for BSD systems
+ - Add support for setting curlopt_xxx_large options
+
 0.9
  - Fix for very old versions of libcurl (RHEL 5)
  - Do not convert paths to UTF-8 (only URLs)
