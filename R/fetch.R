@@ -10,6 +10,12 @@
 #' you need to check the status code of http requests yourself in the response,
 #' and deal with it accordingly.
 #'
+#' Both \code{curl_fetch_memory} and \code{curl_fetch_disk} have a blocking and
+#' non-blocking C implementation. The latter is slightly slower but allows for
+#' interrupting the download prematurely (using e.g. CTRL+C or ESC). Interrupting
+#' is enabled when R runs in interactive mode or when
+#' \code{getOption("curl_interrupt") == TRUE}.
+#'
 #' @param url A character string naming the URL of a resource to be downloaded.
 #' @param handle a curl handle object
 #' @export
@@ -30,7 +36,8 @@
 #'   cat(rawToChar(x))
 #' })
 curl_fetch_memory <- function(url, handle = new_handle()){
-  output <- .Call(R_curl_fetch_memory, url, handle)
+  nonblocking <- isTRUE(getOption("curl_interrupt", interactive()))
+  output <- .Call(R_curl_fetch_memory, url, handle, nonblocking)
   res <- handle_response_data(handle)
   res$content <- output
   res
@@ -41,8 +48,9 @@ curl_fetch_memory <- function(url, handle = new_handle()){
 #' @rdname curl_fetch
 #' @useDynLib curl R_curl_fetch_disk
 curl_fetch_disk <- function(url, path, handle = new_handle()){
+  nonblocking <- isTRUE(getOption("curl_interrupt", interactive()))
   path <- normalizePath(path, mustWork = FALSE)
-  output <- .Call(R_curl_fetch_disk, url, handle, path, "wb")
+  output <- .Call(R_curl_fetch_disk, url, handle, path, "wb", nonblocking)
   res <- handle_response_data(handle)
   res$content <- output
   res

@@ -33,6 +33,12 @@ The curl_fetch functions automatically raise an error upon protocol problems
 (network, disk, ssl) but do not implement application logic. For example for
 you need to check the status code of http requests yourself in the response,
 and deal with it accordingly.
+
+Both \code{curl_fetch_memory} and \code{curl_fetch_disk} have a blocking and
+non-blocking C implementation. The latter is slightly slower but allows for
+interrupting the download prematurely (using e.g. CTRL+C or ESC). Interrupting
+is enabled when R runs in interactive mode or when
+\code{getOption("curl_interrupt") == TRUE}.
 }
 \examples{
 # Load in memory
