@@ -12,10 +12,7 @@
 
 .onAttach <- function(libname, pkgname){
   if (grepl("mingw", R.Version()$platform) && !file.exists(get_bundle())){
-    packageStartupMessage("No CA bundle found. SSL validation disabled.")
-
-    # CRAN does not like warnings for r-oldrel. Fix once R 3.3 is out:
-    #warning("No CA bundle found. SSL validation disabled.", call. = FALSE)
+    warning("No CA bundle found. SSL validation disabled.", call. = FALSE)
   }
 }
 
