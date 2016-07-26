@@ -1,7 +1,7 @@
-7bcb381f600e7cd7faa02d0992182603 *DESCRIPTION
+be85f7cf555d5f3b869ba610c44d758a *DESCRIPTION
 18750d3072acd13fa89dedff85e414ca *LICENSE
 74e772b3d5a1c0fa161d2bdb378fd420 *NAMESPACE
-955589a055ae15af7515cec958b4c688 *NEWS
+8829a8484a2e913c72a862eb0a601ab4 *NEWS
 f103c5b4e06fc85fdd9409a251479e1b *R/curl.R
 c0e1add7312499b80c202068a86477fb *R/download.R
 c6c5182b1629ba6080707e80026cf3ca *R/escape.R
@@ -39,7 +39,7 @@ ce4751400b85fda603699b6280b06a16 *src/Makevars.win
 e45d5f9e7cf4b89b36018b3a9a9518fb *src/callbacks.h
 80acaf066147cc0e685399d1db2301b1 *src/curl-common.h
 ca60d50a5e73b486510be5d802fdea28 *src/curl-symbols.h
-86eb9ebbde176a3086d9a66cb191c34d *src/curl.c
+5492f906305d944a2d1f25cecabfbe82 *src/curl.c
 db30b2570697a81a07f97818c3481e03 *src/download.c
 6ced00f0ef2e58a9bbf1ad43367f9f31 *src/escape.c
 98d718f978314e7d15e4730f63920744 *src/fetch.c
@@ -65,4 +65,4 @@ dc613240ba77d5d25ceb20888aae098c *tests/testthat/test-auth.R
 0e68101873ae3faebd0ede6c5a66f18f *tools/symbols-in-versions
 5530d20cf2a60b30748e9e199d8fa5e6 *tools/symbols.R
 9bed9017015d93cf4afab366bc2f5254 *tools/winlibs.R
-26bd4a1c6bce20b64eddbcb25df3fdbd *vignettes/intro.Rmd
+95f6517d459fe2ea00a93b91a8789c10 *vignettes/intro.Rmd
