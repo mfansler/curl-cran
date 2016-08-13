@@ -35,7 +35,8 @@ req <- curl_fetch_memory("https://httpbin.org/status/418")
 print(req$status_code)
 
 ## ---- echo = FALSE, message = FALSE, warning=FALSE-----------------------
-invisible(gc())
+close(con)
+rm(con)
 
 ## ------------------------------------------------------------------------
 h <- new_handle()
@@ -58,9 +59,6 @@ cat(readLines(con), sep = "\n")
 tmp <- tempfile()
 curl_download("http://httpbin.org/post", destfile = tmp, handle = h)
 cat(readLines(tmp), sep = "\n")
-
-## ---- echo = FALSE, message = FALSE, warning=FALSE-----------------------
-invisible(gc())
 
 ## ------------------------------------------------------------------------
 # Start with a fresh handle

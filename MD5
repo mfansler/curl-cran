@@ -1,7 +1,7 @@
-be85f7cf555d5f3b869ba610c44d758a *DESCRIPTION
+f96155e702e4a8676c9a0c9d0ec850fd *DESCRIPTION
 18750d3072acd13fa89dedff85e414ca *LICENSE
 74e772b3d5a1c0fa161d2bdb378fd420 *NAMESPACE
-8829a8484a2e913c72a862eb0a601ab4 *NEWS
+af252989a7586717401f1a7677e52b1d *NEWS
 f103c5b4e06fc85fdd9409a251479e1b *R/curl.R
 c0e1add7312499b80c202068a86477fb *R/download.R
 c6c5182b1629ba6080707e80026cf3ca *R/escape.R
@@ -18,9 +18,9 @@ adbee49d5c3955185cde9aa0c89600d9 *R/proxy.R
 9744594dcb86ab087bf10fa12839696c *configure
 d41d8cd98f00b204e9800998ecf8427e *configure.win
 20dc634373cc0f560bdd3e83a4f71f2e *data/curl_symbols.rda
-fa30eece876be88788d9ecd57aa5b899 *inst/doc/intro.R
-26bd4a1c6bce20b64eddbcb25df3fdbd *inst/doc/intro.Rmd
-81e58a8ebb9fdd09a20c2b2278800b7d *inst/doc/intro.html
+e426fa2debb7f21469fb903c22cde314 *inst/doc/intro.R
+95f6517d459fe2ea00a93b91a8789c10 *inst/doc/intro.Rmd
+005c8adf39838b7378931793a0277b77 *inst/doc/intro.html
 758918dcb901760ee7b467a140e837f3 *man/curl.Rd
 0e4a73a737f9b5649edd70d1a7e0e79b *man/curl_download.Rd
 10ec0f2224af4a18cdc7f6884d9cfb95 *man/curl_escape.Rd
@@ -45,11 +45,11 @@ db30b2570697a81a07f97818c3481e03 *src/download.c
 98d718f978314e7d15e4730f63920744 *src/fetch.c
 089ef56d2fceb725fcc684ba85ba2938 *src/form.c
 0c66ee6a65fa291ad390119953beb871 *src/getdate.c
-a59d83cf3fa94e64a5d629c3d047370d *src/handle.c
+9d0e17b58fefc7956d81af4e24ec490b *src/handle.c
 db07699efe44947d40e00adf36e10c56 *src/ieproxy.c
 e5a611682fcdb03cb496e8dc753b8963 *src/init.c
 9e7bf81dd0213ca00d54cf1088a4b853 *src/interrupt.c
-0e52f9d7303c0a44cbea99151082ceb0 *src/nslookup.c
+8835039f7591811e25e9f6ec4928c55f *src/nslookup.c
 818b817a8b8d248a7572fa90f174ba5f *src/utils.c
 eafcef19839648bdc27677beb8ea3f2b *src/version.c
 5c32d93f54a58c1382926a61792bfaed *src/winhttp32.def.in
