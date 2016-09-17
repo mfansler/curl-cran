@@ -10,10 +10,26 @@ typedef struct {
 } memory;
 
 typedef struct {
+  SEXP multiptr;
+  SEXP handles;
+  CURLM *m;
+} multiref;
+
+typedef struct {
+  multiref *mref;
+  struct refnode *node;
+  memory content;
+  SEXP complete;
+  SEXP error;
+} async;
+
+typedef struct {
+  SEXP handleptr;
   CURL *handle;
   struct curl_httppost *form;
   struct curl_slist *headers;
   memory resheaders;
+  async async;
   int refCount;
   int locked;
 } reference;
@@ -21,6 +37,7 @@ typedef struct {
 CURL* get_handle(SEXP ptr);
 reference* get_ref(SEXP ptr);
 void assert(CURLcode res);
+void massert(CURLMcode res);
 void stop_for_status(CURL *http_handle);
 SEXP slist_to_vec(struct curl_slist *slist);
 struct curl_slist* vec_to_slist(SEXP vec);
@@ -32,3 +49,10 @@ void clean_handle(reference *ref);
 size_t push_disk(void* contents, size_t sz, size_t nmemb, FILE *ctx);
 size_t append_buffer(void *contents, size_t sz, size_t nmemb, void *ctx);
 CURLcode curl_perform_with_interrupt(CURL *handle);
+int pending_interrupt();
+SEXP make_handle_response(reference *ref);
+
+/* reflist.c */
+SEXP reflist_init();
+SEXP reflist_add(SEXP x, SEXP target);
+SEXP reflist_remove(SEXP x, SEXP target);

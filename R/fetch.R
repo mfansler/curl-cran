@@ -16,6 +16,13 @@
 #' is enabled when R runs in interactive mode or when
 #' \code{getOption("curl_interrupt") == TRUE}.
 #'
+#' The \code{curl_fetch_multi} function is the asyncronous equivalent of
+#' \code{curl_fetch_memory}. It wraps \code{multi_add} to schedule requests which
+#' are executed concurrently when calling \code{multi_run}. For each successful
+#' request the \code{done} callback is triggered with response data. For failed
+#' requests (when \code{curl_fetch_memory} would raise an error), the \code{fail}
+#' function is triggered with the error message.
+#'
 #' @param url A character string naming the URL of a resource to be downloaded.
 #' @param handle a curl handle object
 #' @export
@@ -35,10 +42,25 @@
 #' res <- curl_fetch_stream("http://httpbin.org/stream/20", function(x){
 #'   cat(rawToChar(x))
 #' })
+#'
+#' # Async API
+#' data <- list()
+#' success <- function(res){
+#'   cat("Request done! Status:", res$status, "\n")
+#'   data <<- c(data, list(res))
+#' }
+#' failure <- function(msg){
+#'   cat("Oh noes! Request failed!", msg, "\n")
+#' }
+#' curl_fetch_multi("http://httpbin.org/get", success, failure)
+#' curl_fetch_multi("http://httpbin.org/status/418", success, failure)
+#' curl_fetch_multi("https://urldoesnotexist.xyz", success, failure)
+#' multi_run()
+#' str(data)
 curl_fetch_memory <- function(url, handle = new_handle()){
   nonblocking <- isTRUE(getOption("curl_interrupt", interactive()))
   output <- .Call(R_curl_fetch_memory, url, handle, nonblocking)
-  res <- handle_response_data(handle)
+  res <- handle_data(handle)
   res$content <- output
   res
 }
@@ -51,7 +73,7 @@ curl_fetch_disk <- function(url, path, handle = new_handle()){
   nonblocking <- isTRUE(getOption("curl_interrupt", interactive()))
   path <- normalizePath(path, mustWork = FALSE)
   output <- .Call(R_curl_fetch_disk, url, handle, path, "wb", nonblocking)
-  res <- handle_response_data(handle)
+  res <- handle_data(handle)
   res$content <- output
   res
 }
@@ -67,5 +89,15 @@ curl_fetch_stream <- function(url, fun, handle = new_handle()){
   while(length(bin <- readBin(con, raw(), 8192L))){
     fun(bin)
   }
-  handle_response_data(handle)
+  handle_data(handle)
+}
+
+#' @export
+#' @rdname curl_fetch
+#' @inheritParams multi
+#' @useDynLib curl R_curl_connection
+curl_fetch_multi <- function(url, done = NULL, fail = NULL, pool = NULL, handle = new_handle()){
+  handle_setopt(handle, url = url)
+  multi_add(handle = handle, done = done, fail = fail, pool = pool)
+  invisible(handle)
 }
