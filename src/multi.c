@@ -204,7 +204,7 @@ void fin_multi(SEXP ptr){
   R_ClearExternalPtr(ptr);
 }
 
-SEXP R_multi_new(SEXP finalizer){
+SEXP R_multi_new(){
   multiref *ref = calloc(1, sizeof(multiref));
   ref->m = curl_multi_init();
   ref->handles = reflist_init();
@@ -219,9 +219,11 @@ SEXP R_multi_new(SEXP finalizer){
 SEXP R_multi_setopt(SEXP pool_ptr, SEXP total_con, SEXP host_con, SEXP multiplex){
   multiref *mref = get_multiref(pool_ptr);
   CURLM *multi = mref->m;
+
+  // NOTE: CURLPIPE_HTTP1 is unsafe for non idempotent requests
   #ifdef CURLPIPE_MULTIPLEX
-    if(asLogical(multiplex))
-      massert(curl_multi_setopt(multi, CURLMOPT_PIPELINING, CURLPIPE_MULTIPLEX));
+    massert(curl_multi_setopt(multi, CURLMOPT_PIPELINING,
+                              asLogical(multiplex) ? CURLPIPE_MULTIPLEX : CURLPIPE_NOTHING));
   #endif
 
   #ifdef HAS_CURLMOPT_MAX_TOTAL_CONNECTIONS
