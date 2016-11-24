@@ -58,7 +58,7 @@
 #' multi_run()
 #' str(data)
 curl_fetch_memory <- function(url, handle = new_handle()){
-  nonblocking <- isTRUE(getOption("curl_interrupt", interactive()))
+  nonblocking <- isTRUE(getOption("curl_interrupt", TRUE))
   output <- .Call(R_curl_fetch_memory, url, handle, nonblocking)
   res <- handle_data(handle)
   res$content <- output
@@ -70,7 +70,7 @@ curl_fetch_memory <- function(url, handle = new_handle()){
 #' @rdname curl_fetch
 #' @useDynLib curl R_curl_fetch_disk
 curl_fetch_disk <- function(url, path, handle = new_handle()){
-  nonblocking <- isTRUE(getOption("curl_interrupt", interactive()))
+  nonblocking <- isTRUE(getOption("curl_interrupt", TRUE))
   path <- normalizePath(path, mustWork = FALSE)
   output <- .Call(R_curl_fetch_disk, url, handle, path, "wb", nonblocking)
   res <- handle_data(handle)
@@ -84,10 +84,13 @@ curl_fetch_disk <- function(url, path, handle = new_handle()){
 #' @rdname curl_fetch
 #' @useDynLib curl R_curl_connection
 curl_fetch_stream <- function(url, fun, handle = new_handle()){
-  con <- .Call(R_curl_connection, url, "rb", handle, FALSE)
+  con <- curl(url, handle =  handle)
+  open(con, "rb", blocking = FALSE)
   on.exit(close(con))
-  while(length(bin <- readBin(con, raw(), 8192L))){
-    fun(bin)
+  while(isIncomplete(con)){
+    buf <- readBin(con, raw(), 8192L)
+    if(length(buf))
+      fun(buf)
   }
   handle_data(handle)
 }
