@@ -1,6 +1,6 @@
 /* *
  * Streaming interface to libcurl for R. (c) 2015 Jeroen Ooms.
- * Source: https://github.com/jeroenooms/curl
+ * Source: https://github.com/jeroen/curl
  * Comments and contributions are welcome!
  * Helpful libcurl examples:
  *  - http://curl.haxx.se/libcurl/c/getinmemory.html
@@ -43,10 +43,11 @@ typedef struct {
   char *url;
   char *buf;
   char *cur;
+  int block_open;
   int has_data;
   int has_more;
   int used;
-  int stop;
+  int stream;
   size_t size;
   size_t limit;
   CURLM *manager;
@@ -61,7 +62,7 @@ static size_t push(void *contents, size_t sz, size_t nmemb, void *ctx) {
   req->has_data = 1;
 
   /* move existing data to front of buffer (if any) */
-  memcpy(req->buf, req->cur, req->size);
+  memmove(req->buf, req->cur, req->size);
 
   /* allocate more space if required */
   size_t realsize = sz * nmemb;
@@ -125,12 +126,20 @@ static size_t rcurl_read(void *target, size_t sz, size_t ni, Rconnection con) {
   /* append data to the target buffer */
   size_t total_size = pop(target, req_size, req);
   while((req_size > total_size) && req->has_more) {
+    /* wait for activity, timeout or "nothing" */
+#ifdef HAS_MULTI_WAIT
+    int numfds;
+    if(con->blocking || req->stream)
+      massert(curl_multi_wait(req->manager, NULL, 0, 1000, &numfds));
+#endif
     fetchdata(req);
     total_size += pop((char*)target + total_size, (req_size-total_size), req);
+    if(!req->block_open)
+      stop_for_status(req->handle);
     if(con->blocking == FALSE)
       break;
   }
-  con->incomplete = req->has_more;
+  con->incomplete = req->has_more || req->size;
   return total_size;
 }
 
@@ -172,12 +181,16 @@ void reset(Rconnection con) {
   req->ref->locked = 0;
   con->isopen = FALSE;
   con->text = TRUE;
+  con->incomplete = FALSE;
   strcpy(con->mode, "r");
 }
 
 static Rboolean rcurl_open(Rconnection con) {
   request *req = (request*) con->private;
-  //Rprintf("Opening URL:%s\n", req->url);
+
+  //same message as base::url()
+  if (con->mode[0] != 'r' || strchr(con->mode, 'w'))
+    Rf_error("can only open URLs for reading");
 
   if(req->ref->locked)
     Rf_error("Handle is already in use elsewhere.");
@@ -200,31 +213,37 @@ static Rboolean rcurl_open(Rconnection con) {
   req->has_data = 0;
   req->has_more = 1;
 
+  /* fully non-blocking has 's' in open mode */
+  req->block_open = !strchr(con->mode, 's');
+
  /* Wait for first data to arrive. Monitoring a change in status code does not
    suffice in case of http redirects */
-  while(req->has_more && !req->has_data) {
+  while(req->block_open && req->has_more && !req->has_data) {
+#ifdef HAS_MULTI_WAIT
+    int numfds;
+    massert(curl_multi_wait(req->manager, NULL, 0, 1000, &numfds));
+#endif
     fetchdata(req);
   }
 
   /* check http status code */
-  /* Non blocking connections should be checked via handle_data() */
-  if(con->blocking && req->stop)
+  /* Stream connections should be checked via handle_data() */
+  /* Non-blocking open connections get checked during read */
+  if(req->block_open && !req->stream)
     stop_for_status(handle);
 
   /* set mode in case open() changed it */
-  con->text = strcmp(con->mode, "rb") ? TRUE : FALSE;
+  con->text = strchr(con->mode, 'b') ? FALSE : TRUE;
   con->isopen = TRUE;
+  con->incomplete = TRUE;
   return TRUE;
 }
 
-SEXP R_curl_connection(SEXP url, SEXP mode, SEXP ptr, SEXP stop_on_error) {
+SEXP R_curl_connection(SEXP url, SEXP ptr, SEXP stream) {
   if(!isString(url))
     error("Argument 'url' must be string.");
 
-  if(!isString(mode))
-    error("Argument 'mode' must be string.");
-
-  /* create the R connection object */
+  /* create the R connection object, mimicking base::url() */
   Rconnection con;
   SEXP rc = PROTECT(R_new_custom_connection(translateCharUTF8(asChar(url)), "r", "curl", &con));
 
@@ -235,15 +254,15 @@ SEXP R_curl_connection(SEXP url, SEXP mode, SEXP ptr, SEXP stop_on_error) {
   req->limit = CURL_MAX_WRITE_SIZE;
   req->buf = malloc(req->limit);
   req->manager = curl_multi_init();
+  req->stream = asLogical(stream); //prevents busy-loop for curl_fetch_stream
   req->used = 0;
-  req->stop = asLogical(stop_on_error);
 
   /* allocate url string */
   req->url = malloc(strlen(translateCharUTF8(asChar(url))) + 1);
   strcpy(req->url, translateCharUTF8(asChar(url)));
 
   /* set connection properties */
-  con->incomplete = TRUE;
+  con->incomplete = FALSE;
   con->private = req;
   con->canseek = FALSE;
   con->canwrite = FALSE;
@@ -257,15 +276,6 @@ SEXP R_curl_connection(SEXP url, SEXP mode, SEXP ptr, SEXP stop_on_error) {
   con->read = rcurl_read;
   con->fgetc = rcurl_fgetc;
   con->fgetc_internal = rcurl_fgetc;
-
-  /* open connection  */
-  const char *smode = CHAR(asChar(mode));
-  if(!strcmp(smode, "r") || !strcmp(smode, "rb")){
-    strcpy(con->mode, smode);
-    rcurl_open(con);
-  } else if(strcmp(smode, "")) {
-    error("Invalid mode: %s", smode);
-  }
 
   /* protect the handle */
   (req->ref->refCount)++;

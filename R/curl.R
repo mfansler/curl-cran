@@ -8,8 +8,7 @@
 #' In this case \code{readBin} and \code{readLines} will return immediately with data
 #' that is available without waiting. For such non-blocking connections the caller
 #' needs to call \code{\link{isIncomplete}} to check if the download has completed
-#' yet. Non-blocking connections do raise an error for non-successful HTTP status;
-#' the caller can check this via \code{\link{handle_data}}.
+#' yet.
 #'
 #' @useDynLib curl R_curl_connection
 #' @export
@@ -54,17 +53,26 @@
 #' readLines(curl("gopher://quux.org/1"))
 #'
 #' # Streaming data
-#' con <- curl("http://jeroenooms.github.io/data/diamonds.json", "r")
+#' con <- curl("http://jeroen.github.io/data/diamonds.json", "r")
 #' while(length(x <- readLines(con, n = 5))){
 #'   print(x)
 #' }
 #'
 #' # Stream large dataset over https with gzip
 #' library(jsonlite)
-#' con <- gzcon(curl("https://jeroenooms.github.io/data/nycflights13.json.gz"))
+#' con <- gzcon(curl("https://jeroen.github.io/data/nycflights13.json.gz"))
 #' nycflights <- stream_in(con)
 #' }
 #'
 curl <- function(url = "http://httpbin.org/get", open = "", handle = new_handle()){
-  .Call(R_curl_connection, url, open, handle, TRUE)
+  curl_connection(url, open, handle)
+}
+
+# 'stream' currently only used for non-blocking connections to prevent
+# busy looping in curl_fetch_stream()
+curl_connection <- function(url, mode, handle, stream = FALSE){
+  con <- .Call(R_curl_connection, url, handle, stream)
+  if(!identical(mode, ""))
+    open(con, open = mode)
+  return(con)
 }

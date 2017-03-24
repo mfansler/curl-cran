@@ -24,8 +24,7 @@ As of version 2.3 curl connections support \code{open(con, blocking = FALSE)}.
 In this case \code{readBin} and \code{readLines} will return immediately with data
 that is available without waiting. For such non-blocking connections the caller
 needs to call \code{\link{isIncomplete}} to check if the download has completed
-yet. Non-blocking connections do raise an error for non-successful HTTP status;
-the caller can check this via \code{\link{handle_data}}.
+yet.
 }
 \examples{
 \dontrun{
@@ -65,16 +64,15 @@ readLines(curl("ftps://test.rebex.net:990/readme.txt"))
 readLines(curl("gopher://quux.org/1"))
 
 # Streaming data
-con <- curl("http://jeroenooms.github.io/data/diamonds.json", "r")
+con <- curl("http://jeroen.github.io/data/diamonds.json", "r")
 while(length(x <- readLines(con, n = 5))){
   print(x)
 }
 
 # Stream large dataset over https with gzip
 library(jsonlite)
-con <- gzcon(curl("https://jeroenooms.github.io/data/nycflights13.json.gz"))
+con <- gzcon(curl("https://jeroen.github.io/data/nycflights13.json.gz"))
 nycflights <- stream_in(con)
 }
 
 }
-
