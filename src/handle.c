@@ -9,6 +9,10 @@
 #define HAS_HTTP_VERSION_2TLS 1
 #endif
 
+#if LIBCURL_VERSION_MAJOR > 7 || (LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR >= 32)
+#define HAS_XFERINFOFUNCTION 1
+#endif
+
 char CA_BUNDLE[MAX_PATH];
 
 SEXP R_set_bundle(SEXP path){
@@ -87,8 +91,13 @@ void set_handle_defaults(reference *ref){
   assert(curl_easy_setopt(handle, CURLOPT_COOKIEFILE, ""));
   assert(curl_easy_setopt(handle, CURLOPT_FILETIME, 1L));
 
-  /* a default user agent */
-  assert(curl_easy_setopt(handle, CURLOPT_USERAGENT, "r/curl/jeroen"));
+  /* set the default user agent */
+  SEXP agent = GetOption1(install("HTTPUserAgent"));
+  if(isString(agent) && Rf_length(agent)){
+    assert(curl_easy_setopt(handle, CURLOPT_USERAGENT, CHAR(STRING_ELT(agent, 0))));
+  } else {
+    assert(curl_easy_setopt(handle, CURLOPT_USERAGENT, "r/curl/jeroen"));
+  }
 
   /* allow all authentication methods */
   assert(curl_easy_setopt(handle, CURLOPT_HTTPAUTH, CURLAUTH_ANY));
@@ -153,6 +162,16 @@ SEXP R_handle_setopt(SEXP ptr, SEXP keys, SEXP values){
     SEXP val = VECTOR_ELT(values, i);
     if(val == R_NilValue){
       assert(curl_easy_setopt(handle, key, NULL));
+#ifdef HAS_XFERINFOFUNCTION
+    } else if (key == CURLOPT_XFERINFOFUNCTION) {
+      if (TYPEOF(val) != CLOSXP)
+        error("Value for option %s (%d) must be a function.", optname, key);
+
+      assert(curl_easy_setopt(handle, CURLOPT_XFERINFOFUNCTION,
+                              (curl_progress_callback) R_curl_callback_xferinfo));
+      assert(curl_easy_setopt(handle, CURLOPT_XFERINFODATA, val));
+      assert(curl_easy_setopt(handle, CURLOPT_NOPROGRESS, 0));
+#endif
     } else if (key == CURLOPT_PROGRESSFUNCTION) {
       if (TYPEOF(val) != CLOSXP)
         error("Value for option %s (%d) must be a function.", optname, key);
@@ -160,6 +179,7 @@ SEXP R_handle_setopt(SEXP ptr, SEXP keys, SEXP values){
       assert(curl_easy_setopt(handle, CURLOPT_PROGRESSFUNCTION,
         (curl_progress_callback) R_curl_callback_progress));
       assert(curl_easy_setopt(handle, CURLOPT_PROGRESSDATA, val));
+      assert(curl_easy_setopt(handle, CURLOPT_NOPROGRESS, 0));
     } else if (key == CURLOPT_READFUNCTION) {
       if (TYPEOF(val) != CLOSXP)
         error("Value for option %s (%d) must be a function.", optname, key);

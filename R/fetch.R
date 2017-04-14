@@ -39,7 +39,7 @@
 #' readLines(res$content)
 #'
 #' # Stream with callback
-#' res <- curl_fetch_stream("http://httpbin.org/stream/20", function(x){
+#' res <- curl_fetch_stream("http://www.httpbin.org/drip?duration=5&numbytes=15&code=200", function(x){
 #'   cat(rawToChar(x))
 #' })
 #'
@@ -84,11 +84,14 @@ curl_fetch_disk <- function(url, path, handle = new_handle()){
 #' @rdname curl_fetch
 #' @useDynLib curl R_curl_connection
 curl_fetch_stream <- function(url, fun, handle = new_handle()){
-  con <- curl_connection(url, mode = "", handle = handle, stream = TRUE)
-  open(con, "rb", blocking = FALSE)
+  # Blocking = TRUE and partial = TRUE to prevent busy-waiting
+  con <- curl_connection(url, mode = "", handle = handle, partial = TRUE)
+
+  # 'f' means: do not error for status code
+  open(con, "rbf")
   on.exit(close(con))
   while(isIncomplete(con)){
-    buf <- readBin(con, raw(), 8192L)
+    buf <- readBin(con, raw(), 32768L)
     if(length(buf))
       fun(buf)
   }

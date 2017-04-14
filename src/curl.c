@@ -43,11 +43,10 @@ typedef struct {
   char *url;
   char *buf;
   char *cur;
-  int block_open;
   int has_data;
   int has_more;
   int used;
-  int stream;
+  int partial;
   size_t size;
   size_t limit;
   CURLM *manager;
@@ -129,14 +128,14 @@ static size_t rcurl_read(void *target, size_t sz, size_t ni, Rconnection con) {
     /* wait for activity, timeout or "nothing" */
 #ifdef HAS_MULTI_WAIT
     int numfds;
-    if(con->blocking || req->stream)
+    if(con->blocking)
       massert(curl_multi_wait(req->manager, NULL, 0, 1000, &numfds));
 #endif
     fetchdata(req);
     total_size += pop((char*)target + total_size, (req_size-total_size), req);
-    if(!req->block_open)
-      stop_for_status(req->handle);
-    if(con->blocking == FALSE)
+
+    //return less than requested data for non-blocking connections, or curl_fetch_stream()
+    if(!con->blocking || req->partial)
       break;
   }
   con->incomplete = req->has_more || req->size;
@@ -214,11 +213,12 @@ static Rboolean rcurl_open(Rconnection con) {
   req->has_more = 1;
 
   /* fully non-blocking has 's' in open mode */
-  req->block_open = !strchr(con->mode, 's');
+  int block_open = strchr(con->mode, 's') == NULL;
+  int force_open = strchr(con->mode, 'f') != NULL;
 
  /* Wait for first data to arrive. Monitoring a change in status code does not
    suffice in case of http redirects */
-  while(req->block_open && req->has_more && !req->has_data) {
+  while(block_open && req->has_more && !req->has_data) {
 #ifdef HAS_MULTI_WAIT
     int numfds;
     massert(curl_multi_wait(req->manager, NULL, 0, 1000, &numfds));
@@ -229,7 +229,7 @@ static Rboolean rcurl_open(Rconnection con) {
   /* check http status code */
   /* Stream connections should be checked via handle_data() */
   /* Non-blocking open connections get checked during read */
-  if(req->block_open && !req->stream)
+  if(block_open && !force_open)
     stop_for_status(handle);
 
   /* set mode in case open() changed it */
@@ -239,7 +239,7 @@ static Rboolean rcurl_open(Rconnection con) {
   return TRUE;
 }
 
-SEXP R_curl_connection(SEXP url, SEXP ptr, SEXP stream) {
+SEXP R_curl_connection(SEXP url, SEXP ptr, SEXP partial) {
   if(!isString(url))
     error("Argument 'url' must be string.");
 
@@ -254,7 +254,7 @@ SEXP R_curl_connection(SEXP url, SEXP ptr, SEXP stream) {
   req->limit = CURL_MAX_WRITE_SIZE;
   req->buf = malloc(req->limit);
   req->manager = curl_multi_init();
-  req->stream = asLogical(stream); //prevents busy-loop for curl_fetch_stream
+  req->partial = asLogical(partial); //only for curl_fetch_stream()
   req->used = 0;
 
   /* allocate url string */
