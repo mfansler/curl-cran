@@ -1,13 +1,12 @@
 #include "curl-common.h"
 
 CURL* get_handle(SEXP ptr){
-  if(!R_ExternalPtrAddr(ptr))
-    error("handle is dead");
-  reference *ref = (reference*) R_ExternalPtrAddr(ptr);
-  return ref->handle;
+  return get_ref(ptr)->handle;
 }
 
 reference* get_ref(SEXP ptr){
+  if(TYPEOF(ptr) != EXTPTRSXP || !Rf_inherits(ptr, "curl_handle"))
+    Rf_error("handle is not a curl_handle()");
   if(!R_ExternalPtrAddr(ptr))
     error("handle is dead");
   reference *ref = (reference*) R_ExternalPtrAddr(ptr);
@@ -18,7 +17,12 @@ void set_form(reference *ref, struct curl_httppost* newform){
   if(ref->form)
     curl_formfree(ref->form);
   ref->form = newform;
-  assert(curl_easy_setopt(ref->handle, CURLOPT_HTTPPOST, ref->form));
+  if(newform){
+    assert(curl_easy_setopt(ref->handle, CURLOPT_HTTPPOST, ref->form));
+  } else {
+    // CURLOPT_HTTPPOST has bug for empty forms. We probably want this:
+    assert(curl_easy_setopt(ref->handle, CURLOPT_CUSTOMREQUEST, "POST"));
+  }
 }
 
 void set_headers(reference *ref, struct curl_slist *newheaders){
