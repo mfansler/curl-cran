@@ -20,8 +20,8 @@ void set_form(reference *ref, struct curl_httppost* newform){
   if(newform){
     assert(curl_easy_setopt(ref->handle, CURLOPT_HTTPPOST, ref->form));
   } else {
-    // CURLOPT_HTTPPOST has bug for empty forms. We probably want this:
-    assert(curl_easy_setopt(ref->handle, CURLOPT_CUSTOMREQUEST, "POST"));
+    //CURLOPT_HTTPPOST has bug for empty forms. We probably want this:
+    assert(curl_easy_setopt(ref->handle, CURLOPT_POSTFIELDS, ""));
   }
 }
 
@@ -39,9 +39,20 @@ void reset_resheaders(reference *ref){
   ref->resheaders.size = 0;
 }
 
+void reset_errbuf(reference *ref){
+  memset(ref->errbuf, 0, CURL_ERROR_SIZE);
+}
+
 void assert(CURLcode res){
   if(res != CURLE_OK)
     error(curl_easy_strerror(res));
+}
+
+void assert_status(CURLcode res, reference *ref){
+  if(res == CURLE_OPERATION_TIMEDOUT)
+    Rf_error("%s: %s", curl_easy_strerror(res), ref->errbuf);
+  if(res != CURLE_OK)
+    Rf_error("%s", strlen(ref->errbuf) ? ref->errbuf : curl_easy_strerror(res));
 }
 
 void massert(CURLMcode res){

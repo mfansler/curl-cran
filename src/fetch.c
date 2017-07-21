@@ -13,10 +13,11 @@ SEXP R_curl_fetch_memory(SEXP url, SEXP ptr, SEXP nonblocking){
   CURL *handle = get_handle(ptr);
 
   /* update the url */
-  curl_easy_setopt(handle, CURLOPT_URL, translateCharUTF8(asChar(url)));
+  curl_easy_setopt(handle, CURLOPT_URL, CHAR(STRING_ELT(url, 0)));
 
   /* reset the response header buffer */
   reset_resheaders(get_ref(ptr));
+  reset_errbuf(get_ref(ptr));
 
   /* buffer body */
   memory body = {NULL, 0};
@@ -34,7 +35,7 @@ SEXP R_curl_fetch_memory(SEXP url, SEXP ptr, SEXP nonblocking){
   /* check for errors */
   if (status != CURLE_OK) {
     free(body.buf);
-    error(curl_easy_strerror(status));
+    assert_status(status, get_ref(ptr));
   }
 
   /* create output */
@@ -60,10 +61,11 @@ SEXP R_curl_fetch_disk(SEXP url, SEXP ptr, SEXP path, SEXP mode, SEXP nonblockin
   CURL *handle = get_handle(ptr);
 
   /* update the url */
-  curl_easy_setopt(handle, CURLOPT_URL, translateCharUTF8(asChar(url)));
+  curl_easy_setopt(handle, CURLOPT_URL, CHAR(STRING_ELT(url, 0)));
 
   /* reset the response header buffer */
   reset_resheaders(get_ref(ptr));
+  reset_errbuf(get_ref(ptr));
 
   /* open file */
   FILE *dest = fopen(CHAR(asChar(path)), CHAR(asChar(mode)));
@@ -82,9 +84,7 @@ SEXP R_curl_fetch_disk(SEXP url, SEXP ptr, SEXP path, SEXP mode, SEXP nonblockin
   fclose(dest);
 
   /* check for errors */
-  if (status != CURLE_OK) {
-    error(curl_easy_strerror(status));
-  }
+  assert_status(status, get_ref(ptr));
 
   /* return the file path */
   return path;

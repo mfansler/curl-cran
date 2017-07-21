@@ -13,7 +13,13 @@
 #define HAS_XFERINFOFUNCTION 1
 #endif
 
+#if LIBCURL_VERSION_MAJOR > 7 || (LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR >= 36)
+#define HAS_CURLOPT_EXPECT_100_TIMEOUT_MS 1
+#endif
+
+
 char CA_BUNDLE[MAX_PATH];
+static struct curl_slist * default_headers;
 
 SEXP R_set_bundle(SEXP path){
   strcpy(CA_BUNDLE, CHAR(asChar(path)));
@@ -52,6 +58,11 @@ void fin_handle(SEXP ptr){
 
   //free stuff
   clean_handle(ref);
+}
+
+/* the default readfunc os fread which can cause R to freeze */
+size_t dummy_read(char *buffer, size_t size, size_t nitems, void *instream){
+  return 0;
 }
 
 /* These are defaulst that we always want to set */
@@ -108,6 +119,18 @@ void set_handle_defaults(reference *ref){
   if(curl_version_info(CURLVERSION_NOW)->features & CURL_VERSION_HTTP2)
     assert(curl_easy_setopt(handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS));
 #endif
+
+  /* set an error buffer */
+  assert(curl_easy_setopt(handle, CURLOPT_ERRORBUFFER, ref->errbuf));
+
+  /* dummy readfunction because default can freeze R */
+  assert(curl_easy_setopt(handle, CURLOPT_READFUNCTION, dummy_read));
+
+  /* set default headers (disables the Expect: http 100)*/
+#ifdef HAS_CURLOPT_EXPECT_100_TIMEOUT_MS
+  assert(curl_easy_setopt(handle, CURLOPT_EXPECT_100_TIMEOUT_MS, 0L));
+#endif
+  assert(curl_easy_setopt(handle, CURLOPT_HTTPHEADER, default_headers));
 }
 
 SEXP R_new_handle(){
@@ -129,6 +152,7 @@ SEXP R_handle_reset(SEXP ptr){
   reference *ref = get_ref(ptr);
   set_form(ref, NULL);
   set_headers(ref, NULL);
+  reset_errbuf(ref);
   curl_easy_reset(ref->handle);
 
   //restore default settings
@@ -148,7 +172,7 @@ int opt_is_linked_list(int key) {
 
 SEXP R_handle_setopt(SEXP ptr, SEXP keys, SEXP values){
   CURL *handle = get_handle(ptr);
-  SEXP optnames = getAttrib(values, R_NamesSymbol);
+  SEXP optnames = PROTECT(getAttrib(values, R_NamesSymbol));
 
   if(!isInteger(keys))
     error("keys` must be an integer");
@@ -194,6 +218,10 @@ SEXP R_handle_setopt(SEXP ptr, SEXP keys, SEXP values){
       assert(curl_easy_setopt(handle, CURLOPT_DEBUGFUNCTION,
         (curl_debug_callback) R_curl_callback_debug));
       assert(curl_easy_setopt(handle, CURLOPT_DEBUGDATA, val));
+    } else if (key == CURLOPT_URL) {
+      /* always use utf-8 for urls */
+      const char * url_utf8 = translateCharUTF8(STRING_ELT(val, 0));
+      assert(curl_easy_setopt(handle, CURLOPT_URL, url_utf8));
     } else if (opt_is_linked_list(key)) {
       error("Option %s (%d) not supported.", optname, key);
     } else if(key < 10000){
@@ -225,6 +253,7 @@ SEXP R_handle_setopt(SEXP ptr, SEXP keys, SEXP values){
       error("Option %s (%d) not supported.", optname, key);
     }
   }
+  UNPROTECT(1);
   return ScalarLogical(1);
 }
 
@@ -290,7 +319,7 @@ SEXP make_status(CURL *handle){
 SEXP make_url(CURL *handle){
   char *res_url;
   assert(curl_easy_getinfo(handle, CURLINFO_EFFECTIVE_URL, &res_url));
-  return mkString(res_url);
+  return ScalarString(mkCharCE(res_url, CE_UTF8));
 }
 
 SEXP make_filetime(CURL *handle){

@@ -92,11 +92,11 @@ static size_t pop(void *target, size_t max, request *req){
   return copy_size;
 }
 
-void check_manager(CURLM *manager) {
+void check_manager(CURLM *manager, reference *ref) {
   for(int msg = 1; msg > 0;){
     CURLMsg *out = curl_multi_info_read(manager, &msg);
     if(out)
-      assert(out->data.result);
+      assert_status(out->data.result, ref);
   }
 }
 
@@ -114,7 +114,7 @@ void fetchdata(request *req) {
   }
   massert(res);
   /* End */
-  check_manager(req->manager);
+  check_manager(req->manager, req->ref);
 }
 
 /* Support for readBin() */
@@ -245,7 +245,9 @@ SEXP R_curl_connection(SEXP url, SEXP ptr, SEXP partial) {
 
   /* create the R connection object, mimicking base::url() */
   Rconnection con;
-  SEXP rc = PROTECT(R_new_custom_connection(translateCharUTF8(asChar(url)), "r", "curl", &con));
+
+  /* R wants description in native encoding, but we use UTF-8 URL below */
+  SEXP rc = PROTECT(R_new_custom_connection(translateChar(STRING_ELT(url, 0)), "r", "curl", &con));
 
   /* setup curl. These are the parts that are recycable. */
   request *req = malloc(sizeof(request));

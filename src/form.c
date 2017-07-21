@@ -3,14 +3,19 @@
 struct curl_httppost* make_form(SEXP form){
   struct curl_httppost* post = NULL;
   struct curl_httppost* last = NULL;
-  SEXP ln = getAttrib(form, R_NamesSymbol);
+  SEXP ln = PROTECT(getAttrib(form, R_NamesSymbol));
   for(int i = 0; i < length(form); i++){
     const char *name = translateCharUTF8(STRING_ELT(ln, i));
     SEXP val = VECTOR_ELT(form, i);
     if(TYPEOF(val) == RAWSXP){
-      unsigned char * data = RAW(val);
       long datalen = Rf_length(val);
-      curl_formadd(&post, &last, CURLFORM_COPYNAME, name, CURLFORM_COPYCONTENTS, data, CURLFORM_CONTENTSLENGTH, datalen, CURLFORM_END);
+      if(datalen > 0){
+        unsigned char * data = RAW(val);
+        curl_formadd(&post, &last, CURLFORM_COPYNAME, name, CURLFORM_COPYCONTENTS, data, CURLFORM_CONTENTSLENGTH, datalen, CURLFORM_END);
+      } else {
+        //Note if 'CURLFORM_CONTENTLEN == 0' then libcurl assumes strlen() !
+        curl_formadd(&post, &last, CURLFORM_COPYNAME, name, CURLFORM_COPYCONTENTS, "", CURLFORM_END);
+      }
     } else if(isVector(val) && Rf_length(val)){
       if(isString(VECTOR_ELT(val, 0))){
         //assume a form_file upload
@@ -36,5 +41,6 @@ struct curl_httppost* make_form(SEXP form){
       error("form value %s not supported", name);
     }
   }
+  UNPROTECT(1);
   return post;
 }

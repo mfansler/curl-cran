@@ -60,15 +60,17 @@ multi_add <- function(handle, done = NULL, fail = NULL, pool = NULL){
 
 #' @param timeout max time in seconds to wait for results. Use \code{0} to poll for results without
 #' waiting at all.
+#' @param poll If \code{TRUE} then return immediately after any of the requests has completed.
+#' May also be an integer in which case it returns after n requests have completed.
 #' @export
 #' @useDynLib curl R_multi_run
 #' @rdname multi
-multi_run <- function(timeout = Inf, pool = NULL){
+multi_run <- function(timeout = Inf, poll = FALSE, pool = NULL){
   if(is.null(pool))
     pool <- multi_default()
   stopifnot(is.numeric(timeout))
   stopifnot(inherits(pool, "curl_multi"))
-  .Call(R_multi_run, pool, timeout)
+  .Call(R_multi_run, pool, timeout, as.integer(poll))
 }
 
 #' @param total_con max total concurrent connections.
