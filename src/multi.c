@@ -43,6 +43,7 @@ void multi_release(reference *ref){
   ref->async.content.size = 0;
   ref->async.complete = NULL;
   ref->async.error = NULL;
+  ref->async.data = NULL;
   ref->async.node = NULL;
 
   /* Unlock handle (and cleanup if needed) */
@@ -58,7 +59,7 @@ SEXP R_multi_cancel(SEXP handle_ptr){
   return handle_ptr;
 }
 
-SEXP R_multi_add(SEXP handle_ptr, SEXP cb_complete, SEXP cb_error, SEXP pool_ptr){
+SEXP R_multi_add(SEXP handle_ptr, SEXP cb_complete, SEXP cb_error, SEXP cb_data, SEXP pool_ptr){
   multiref *mref = get_multiref(pool_ptr);
   CURLM *multi = mref->m;
 
@@ -67,8 +68,13 @@ SEXP R_multi_add(SEXP handle_ptr, SEXP cb_complete, SEXP cb_error, SEXP pool_ptr
     Rf_error("Handle is locked. Probably in use in a connection or async request.");
 
   /* placeholder body */
-  curl_easy_setopt(ref->handle, CURLOPT_WRITEFUNCTION, append_buffer);
-  curl_easy_setopt(ref->handle, CURLOPT_WRITEDATA, &(ref->async.content));
+  if(Rf_isFunction(cb_data)){
+    curl_easy_setopt(ref->handle, CURLOPT_WRITEFUNCTION, (curl_write_callback) data_callback);
+    curl_easy_setopt(ref->handle, CURLOPT_WRITEDATA, cb_data);
+  } else {
+    curl_easy_setopt(ref->handle, CURLOPT_WRITEFUNCTION, append_buffer);
+    curl_easy_setopt(ref->handle, CURLOPT_WRITEDATA, &(ref->async.content));
+  }
 
   /* add to scheduler */
   massert(curl_multi_add_handle(multi, ref->handle));
@@ -81,7 +87,8 @@ SEXP R_multi_add(SEXP handle_ptr, SEXP cb_complete, SEXP cb_error, SEXP pool_ptr
   /* set multi callbacks */
   ref->async.complete = cb_complete;
   ref->async.error = cb_error;
-  R_SetExternalPtrProtected(handle_ptr, Rf_list2(cb_error, cb_complete));
+  ref->async.data = cb_data;
+  R_SetExternalPtrProtected(handle_ptr, Rf_list3(cb_error, cb_complete, cb_data));
 
   /* lock and protect handle */
   ref->refCount++;
@@ -244,4 +251,55 @@ SEXP R_multi_setopt(SEXP pool_ptr, SEXP total_con, SEXP host_con, SEXP multiplex
 
 SEXP R_multi_list(SEXP pool_ptr){
   return get_multiref(pool_ptr)->handles;
+}
+
+SEXP R_multi_fdset(SEXP pool_ptr){
+  multiref *mref =  get_multiref(pool_ptr);
+  CURLM *multi = mref->m;
+  fd_set read_fd_set, write_fd_set, exc_fd_set;
+  int max_fd, i, num_read = 0, num_write = 0, num_exc = 0;
+  int *pread, *pwrite, *pexc;
+  long timeout;
+  SEXP result, names;
+
+  FD_ZERO(&read_fd_set);
+  FD_ZERO(&write_fd_set);
+  FD_ZERO(&exc_fd_set);
+
+  massert(curl_multi_fdset(multi, &read_fd_set, &write_fd_set,
+			   &exc_fd_set, &max_fd));
+
+  massert(curl_multi_timeout(multi, &timeout));
+
+  for (i = 0; i <= max_fd; i++){
+    if (FD_ISSET(i, &read_fd_set))  num_read++;
+    if (FD_ISSET(i, &write_fd_set)) num_write++;
+    if (FD_ISSET(i, &exc_fd_set))   num_exc++;
+  }
+
+  result = PROTECT(allocVector(VECSXP, 4));
+  SET_VECTOR_ELT(result, 0, allocVector(INTSXP, num_read));
+  SET_VECTOR_ELT(result, 1, allocVector(INTSXP, num_write));
+  SET_VECTOR_ELT(result, 2, allocVector(INTSXP, num_exc));
+  SET_VECTOR_ELT(result, 3, ScalarReal((double) timeout));
+
+  names = PROTECT(allocVector(STRSXP, 4));
+  SET_STRING_ELT(names, 0, mkChar("reads"));
+  SET_STRING_ELT(names, 1, mkChar("writes"));
+  SET_STRING_ELT(names, 2, mkChar("exceptions"));
+  SET_STRING_ELT(names, 3, mkChar("timeout"));
+  setAttrib(result, R_NamesSymbol, names);
+
+  pread  = INTEGER(VECTOR_ELT(result, 0));
+  pwrite = INTEGER(VECTOR_ELT(result, 1));
+  pexc   = INTEGER(VECTOR_ELT(result, 2));
+
+  for (i = 0; i <= max_fd; i++){
+    if (FD_ISSET(i, &read_fd_set))  *(pread++)  = i;
+    if (FD_ISSET(i, &write_fd_set)) *(pwrite++) = i;
+    if (FD_ISSET(i, &exc_fd_set))   *(pexc++)   = i;
+  }
+
+  UNPROTECT(2);
+  return result;
 }

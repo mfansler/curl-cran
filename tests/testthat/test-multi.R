@@ -1,6 +1,7 @@
 context("Multi handle")
 
 test_that("Max connections works", {
+  skip_on_os("solaris")
   skip_if_not(curl_version()$version >= as.numeric_version("7.30"),
     "libcurl does not support host_connections")
   multi_set(host_con = 2, multiplex = FALSE)
@@ -25,6 +26,7 @@ test_that("Max connections reset", {
 })
 
 test_that("Timeout works", {
+  skip_on_os("solaris")
   h1 <- new_handle(url = httpbin("delay/3"))
   h2 <- new_handle(url = httpbin("post"), postfields = "bla bla")
   h3 <- new_handle(url = "https://urldoesnotexist.xyz", connecttimeout = 1)
@@ -97,8 +99,63 @@ test_that("Errors in Callbacks", {
   expect_equal(multi_run(pool = pool), list(success = 0, error = 0, pending = 0))
 })
 
+test_that("Data callback", {
+  con <- rawConnection(raw(0), "r+")
+  on.exit(close(con))
+  hx <- new_handle()
+  handle_setopt(hx, COPYPOSTFIELDS = jsonlite::toJSON(mtcars));
+  handle_setheaders(hx, "Content-Type" = "application/json")
+  status <- NULL
+  curl_fetch_multi(httpbin("post"), done = function(res){
+    status <<- res$status_code
+  }, fail = stop, data = function(x){
+    writeBin(x, con)
+  }, handle = hx)
+
+  curl_fetch_multi(httpbin("get"), done = function(res){
+    #this somehow breaks the gc
+    #expect_equal(res$status_code, 200)
+  }, fail = stop, data = function(x){
+    expect_is(x, "raw")
+  })
+
+  # test protect
+  gc()
+
+  # perform requests
+  out <- multi_run()
+  expect_equal(out$success, 2)
+  expect_equal(status, 200)
+
+  # get data from buffer
+  content <- rawConnectionValue(con)
+  output <- jsonlite::fromJSON(rawToChar(content))
+  expect_is(output$json, "data.frame")
+  expect_equal(sort(names(output$json)), sort(names(mtcars)))
+})
+
+test_that("callback protection", {
+  done <- function(res){
+    expect_is(res$status_code, "integer")
+  }
+  fail <- function(...){
+    print("error")
+  }
+  data <- function(x){
+    expect_is(x, "raw")
+  }
+  pool <- new_pool()
+  handle <- new_handle(url = httpbin("get"))
+  multi_add(handle, done = done, fail = fail, data = data, pool = pool)
+  rm(handle, done, fail, data)
+  gc(); gc();
+  out <- multi_run(pool = pool)
+  expect_equal(out$success, 1)
+})
+
 test_that("GC works", {
   gc()
   expect_equal(total_handles(), 0L)
 })
+
 

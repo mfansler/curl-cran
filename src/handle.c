@@ -113,6 +113,7 @@ void set_handle_defaults(reference *ref){
   /* allow all authentication methods */
   assert(curl_easy_setopt(handle, CURLOPT_HTTPAUTH, CURLAUTH_ANY));
   assert(curl_easy_setopt(handle, CURLOPT_UNRESTRICTED_AUTH, 1L));
+  assert(curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY));
 
   /* enables HTTP2 on HTTPS (match behavior of curl cmd util) */
 #if defined(CURL_VERSION_HTTP2) && defined(HAS_HTTP_VERSION_2TLS)
@@ -125,6 +126,11 @@ void set_handle_defaults(reference *ref){
 
   /* dummy readfunction because default can freeze R */
   assert(curl_easy_setopt(handle, CURLOPT_READFUNCTION, dummy_read));
+
+  /* seems to be needed for native WinSSL */
+#ifdef _WIN32
+  curl_easy_setopt(handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NO_REVOKE);
+#endif
 
   /* set default headers (disables the Expect: http 100)*/
 #ifdef HAS_CURLOPT_EXPECT_100_TIMEOUT_MS
