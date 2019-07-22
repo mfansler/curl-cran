@@ -1,6 +1,13 @@
 #include "curl-common.h"
 #include "callbacks.h"
 
+/* These are defined in typechecking.c */
+extern int r_curl_is_slist_option(CURLoption x);
+extern int r_curl_is_long_option(CURLoption x);
+extern int r_curl_is_off_t_option(CURLoption x);
+extern int r_curl_is_string_option(CURLoption x);
+extern int r_curl_is_postfields_option(CURLoption x);
+
 #define make_string(x) x ? Rf_mkString(x) : ScalarString(NA_STRING)
 
 #ifndef MAX_PATH
@@ -19,9 +26,8 @@
 #define HAS_CURLOPT_EXPECT_100_TIMEOUT_MS 1
 #endif
 
-
 char CA_BUNDLE[MAX_PATH];
-static struct curl_slist * default_headers;
+extern int windows_openssl;
 
 SEXP R_set_bundle(SEXP path){
   strcpy(CA_BUNDLE, CHAR(asChar(path)));
@@ -38,6 +44,8 @@ void clean_handle(reference *ref){
   if(ref->refCount == 0){
     if(ref->headers)
       curl_slist_free_all(ref->headers);
+    if(ref->custom)
+      curl_slist_free_all(ref->custom);
     if(ref->form)
       curl_formfree(ref->form);
     if(ref->handle)
@@ -96,8 +104,25 @@ static int xferinfo_callback(void *clientp, xftype dltotal, xftype dlnow, xftype
   return 0;
 }
 
+/* Set default headers here, these are only allocated once */
+static struct curl_slist * default_headers(){
+  static struct curl_slist * headers = NULL;
+  if(headers == NULL){
+    headers = curl_slist_append(headers, "Expect:");
+  }
+  return headers;
+}
+
+static void set_headers(reference *ref, struct curl_slist *newheaders){
+  if(ref->headers)
+    curl_slist_free_all(ref->headers);
+  ref->headers = newheaders;
+  assert(curl_easy_setopt(ref->handle, CURLOPT_HTTPHEADER,
+                          newheaders ? newheaders : default_headers()));
+}
+
 /* These are defaulst that we always want to set */
-void set_handle_defaults(reference *ref){
+static void set_handle_defaults(reference *ref){
 
   /* the actual curl handle */
   CURL *handle = ref->handle;
@@ -109,18 +134,20 @@ void set_handle_defaults(reference *ref){
   curl_easy_setopt(handle, CURLOPT_HEADERDATA, &(ref->resheaders));
 
   #ifdef _WIN32
-  if(CA_BUNDLE != NULL && strlen(CA_BUNDLE)){
-    /* on windows a cert bundle is included with R version 3.2.0 */
-    curl_easy_setopt(handle, CURLOPT_CAINFO, CA_BUNDLE);
-  } else {
-    /* disable cert validation for older versions of R */
-    curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0L);
-    curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+  if(windows_openssl == 1){
+    if( CA_BUNDLE != NULL && strlen(CA_BUNDLE)){
+      /* on windows a cert bundle is included with R version 3.2.0 */
+      curl_easy_setopt(handle, CURLOPT_CAINFO, CA_BUNDLE);
+    } else {
+      /* disable cert validation for older versions of R */
+      curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0L);
+      curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+    }
   }
   #endif
 
   /* needed to support compressed responses */
-  assert(curl_easy_setopt(handle, CURLOPT_ENCODING, "gzip, deflate"));
+  assert(curl_easy_setopt(handle, CURLOPT_ENCODING, ""));
 
   /* follow redirect */
   assert(curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, 1L));
@@ -163,17 +190,17 @@ void set_handle_defaults(reference *ref){
   curl_easy_setopt(handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NO_REVOKE);
 #endif
 
-  /* set default headers (disables the Expect: http 100)*/
-#ifdef HAS_CURLOPT_EXPECT_100_TIMEOUT_MS
-  assert(curl_easy_setopt(handle, CURLOPT_EXPECT_100_TIMEOUT_MS, 0L));
-#endif
-  assert(curl_easy_setopt(handle, CURLOPT_HTTPHEADER, default_headers));
-
   /* set default progress printer (disabled by default) */
 #ifdef HAS_XFERINFOFUNCTION
   assert(curl_easy_setopt(handle, CURLOPT_XFERINFOFUNCTION, xferinfo_callback));
 #else
   assert(curl_easy_setopt(handle, CURLOPT_PROGRESSFUNCTION, xferinfo_callback));
+#endif
+
+  /* Disable the 'Expect: 100' header (deprecated in recent libcurl) */
+  set_headers(ref, NULL);
+#ifdef HAS_CURLOPT_EXPECT_100_TIMEOUT_MS
+  assert(curl_easy_setopt(handle, CURLOPT_EXPECT_100_TIMEOUT_MS, 0L));
 #endif
 }
 
@@ -196,27 +223,39 @@ SEXP R_handle_reset(SEXP ptr){
   //reset all fields
   reference *ref = get_ref(ptr);
   set_form(ref, NULL);
-  set_headers(ref, NULL);
   reset_errbuf(ref);
   curl_easy_reset(ref->handle);
+
+  //clear custom vector field
+  if(ref->custom){
+    curl_slist_free_all(ref->custom);
+    ref->custom = NULL;
+  }
 
   //restore default settings
   set_handle_defaults(ref);
   return ScalarLogical(1);
 }
 
-int opt_is_linked_list(int key) {
-  // These four options need linked lists of various forms - determined
-  // from inspection of curl.h
-  return
-    key == 10023 || // CURLOPT_HTTPHEADER
-    key == 10024 || // CURLOPT_HTTPPOST
-    key == 10070 || // CURLOPT_TELNETOPTIONS
-    key == 10104 || // CURLOPT_HTTP200ALIASES
-    key == 10228;   // CURLOPT_PROXYHEADER
+SEXP R_handle_setheaders(SEXP ptr, SEXP vec){
+  if(!isString(vec))
+    error("header vector must be a string.");
+  set_headers(get_ref(ptr), vec_to_slist(vec));
+  return ScalarLogical(1);
+}
+
+SEXP R_handle_getheaders(SEXP ptr){
+  reference *ref = get_ref(ptr);
+  return slist_to_vec(ref->headers);
+}
+
+SEXP R_handle_getcustom(SEXP ptr){
+  reference *ref = get_ref(ptr);
+  return slist_to_vec(ref->custom);
 }
 
 SEXP R_handle_setopt(SEXP ptr, SEXP keys, SEXP values){
+  reference *ref = get_ref(ptr);
   CURL *handle = get_handle(ptr);
   SEXP prot = R_ExternalPtrProtected(ptr);
   SEXP optnames = PROTECT(getAttrib(values, R_NamesSymbol));
@@ -273,14 +312,24 @@ SEXP R_handle_setopt(SEXP ptr, SEXP keys, SEXP values){
       /* always use utf-8 for urls */
       const char * url_utf8 = translateCharUTF8(STRING_ELT(val, 0));
       assert(curl_easy_setopt(handle, CURLOPT_URL, url_utf8));
-    } else if (opt_is_linked_list(key)) {
-      error("Option %s (%d) not supported.", optname, key);
-    } else if(key < 10000){
+    } else if(key == CURLOPT_HTTPHEADER){
+      R_handle_setheaders(ptr, val);
+    } else if (r_curl_is_slist_option(key)) {
+      if(!isString(val))
+        error("Value for option %s (%d) must be a string vector", optname, key);
+      ref->custom = vec_to_slist(val);
+      assert(curl_easy_setopt(handle, key, ref->custom));
+    } else if(r_curl_is_long_option(key)){
       if(!isNumeric(val) || length(val) != 1) {
         error("Value for option %s (%d) must be a number.", optname, key);
       }
       assert(curl_easy_setopt(handle, key, (long) asInteger(val)));
-    } else if(key < 20000){
+    } else if(r_curl_is_off_t_option(key)){
+      if(!isNumeric(val) || length(val) != 1) {
+        error("Value for option %s (%d) must be a number.", optname, key);
+      }
+      assert(curl_easy_setopt(handle, key, (curl_off_t) asReal(val)));
+    } else if(r_curl_is_string_option(key) || r_curl_is_postfields_option(key)){
       switch (TYPEOF(val)) {
       case RAWSXP:
         if(key == CURLOPT_POSTFIELDS || key == CURLOPT_COPYPOSTFIELDS)
@@ -295,23 +344,11 @@ SEXP R_handle_setopt(SEXP ptr, SEXP keys, SEXP values){
       default:
         error("Value for option %s (%d) must be a string or raw vector.", optname, key);
       }
-    } else if(key >= 30000 && key < 40000){
-      if(!isNumeric(val) || length(val) != 1) {
-        error("Value for option %s (%d) must be a number.", optname, key);
-      }
-      assert(curl_easy_setopt(handle, key, (curl_off_t) asReal(val)));
     } else {
       error("Option %s (%d) not supported.", optname, key);
     }
   }
   UNPROTECT(1);
-  return ScalarLogical(1);
-}
-
-SEXP R_handle_setheaders(SEXP ptr, SEXP vec){
-  if(!isString(vec))
-    error("header vector must be a string.");
-  set_headers(get_ref(ptr), vec_to_slist(vec));
   return ScalarLogical(1);
 }
 

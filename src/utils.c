@@ -25,13 +25,6 @@ void set_form(reference *ref, struct curl_httppost* newform){
   }
 }
 
-void set_headers(reference *ref, struct curl_slist *newheaders){
-  if(ref->headers)
-    curl_slist_free_all(ref->headers);
-  ref->headers = newheaders;
-  assert(curl_easy_setopt(ref->handle, CURLOPT_HTTPHEADER, ref->headers));
-}
-
 void reset_resheaders(reference *ref){
   if(ref->resheaders.buf)
     free(ref->resheaders.buf);
@@ -107,6 +100,20 @@ size_t push_disk(void* contents, size_t sz, size_t nmemb, FILE *ctx) {
   return fwrite(contents, sz, nmemb, ctx);
 }
 
+static size_t round_up(size_t v){
+  if(v == 0)
+    return 0;
+  v--;
+  v |= v >> 1;
+  v |= v >> 2;
+  v |= v >> 4;
+  v |= v >> 8;
+  v |= v >> 16;
+  if (sizeof(size_t) == 8)
+    v |= v >> 32;
+  return ++v;
+}
+
 size_t append_buffer(void *contents, size_t sz, size_t nmemb, void *ctx) {
 //if (pending_interrupt())
   //  return 0;
@@ -115,13 +122,8 @@ size_t append_buffer(void *contents, size_t sz, size_t nmemb, void *ctx) {
   size_t realsize = sz * nmemb;
   memory *mem = (memory*) ctx;
 
-  /* realloc is slow on windows, therefore increase buffer to nearest 2^n */
-  #ifdef _WIN32
-    mem->buf = realloc(mem->buf, exp2(ceil(log2(mem->size + realsize))));
-  #else
-    mem->buf = realloc(mem->buf, mem->size + realsize);
-  #endif
-
+  /* realloc can be slow, therefore increase buffer to nearest 2^n */
+  mem->buf = realloc(mem->buf, round_up(mem->size + realsize));
   if (!mem->buf)
     return 0;
 
