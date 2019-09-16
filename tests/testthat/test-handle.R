@@ -122,6 +122,12 @@ test_that("Custom vector options", {
   handle_setopt(h, quote = c("bla"))
 })
 
+test_that("Workaround for old libcurl works",{
+  # This should simply not error
+  skip_on_os('windows') # this option only works on unix
+  expect_is(new_handle(UNIX_SOCKET_PATH = ""), "curl_handle")
+})
+
 rm(h)
 test_that("GC works", {
   gc()

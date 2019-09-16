@@ -26,16 +26,16 @@ extern int r_curl_is_postfields_option(CURLoption x);
 #define HAS_CURLOPT_EXPECT_100_TIMEOUT_MS 1
 #endif
 
-char CA_BUNDLE[MAX_PATH];
-extern int windows_openssl;
+char R_WINDOWS_CA_BUNDLE[MAX_PATH];
+curl_sslbackend default_ssl_backend;
 
 SEXP R_set_bundle(SEXP path){
-  strcpy(CA_BUNDLE, CHAR(asChar(path)));
-  return mkString(CA_BUNDLE);
+  strcpy(R_WINDOWS_CA_BUNDLE, CHAR(asChar(path)));
+  return mkString(R_WINDOWS_CA_BUNDLE);
 }
 
 SEXP R_get_bundle(){
-  return mkString(CA_BUNDLE);
+  return mkString(R_WINDOWS_CA_BUNDLE);
 }
 
 int total_handles = 0;
@@ -133,11 +133,15 @@ static void set_handle_defaults(reference *ref){
   curl_easy_setopt(handle, CURLOPT_HEADERFUNCTION, append_buffer);
   curl_easy_setopt(handle, CURLOPT_HEADERDATA, &(ref->resheaders));
 
+  /* Only set a default CA bundle for openssl */
   #ifdef _WIN32
-  if(windows_openssl == 1){
-    if( CA_BUNDLE != NULL && strlen(CA_BUNDLE)){
+  if(default_ssl_backend == CURLSSLBACKEND_OPENSSL) {
+    const char *ca_bundle = getenv("CURL_CA_BUNDLE");
+    if(ca_bundle != NULL) {
+      curl_easy_setopt(handle, CURLOPT_CAINFO, ca_bundle);
+    } else if( R_WINDOWS_CA_BUNDLE != NULL && strlen(R_WINDOWS_CA_BUNDLE)){
       /* on windows a cert bundle is included with R version 3.2.0 */
-      curl_easy_setopt(handle, CURLOPT_CAINFO, CA_BUNDLE);
+      curl_easy_setopt(handle, CURLOPT_CAINFO, R_WINDOWS_CA_BUNDLE);
     } else {
       /* disable cert validation for older versions of R */
       curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0L);
@@ -329,7 +333,7 @@ SEXP R_handle_setopt(SEXP ptr, SEXP keys, SEXP values){
         error("Value for option %s (%d) must be a number.", optname, key);
       }
       assert(curl_easy_setopt(handle, key, (curl_off_t) asReal(val)));
-    } else if(r_curl_is_string_option(key) || r_curl_is_postfields_option(key)){
+    } else if(r_curl_is_postfields_option(key) || r_curl_is_string_option(key)){
       switch (TYPEOF(val)) {
       case RAWSXP:
         if(key == CURLOPT_POSTFIELDS || key == CURLOPT_COPYPOSTFIELDS)
@@ -345,7 +349,7 @@ SEXP R_handle_setopt(SEXP ptr, SEXP keys, SEXP values){
         error("Value for option %s (%d) must be a string or raw vector.", optname, key);
       }
     } else {
-      error("Option %s (%d) not supported.", optname, key);
+      error("Option %s (%d) has unknown or unsupported type.", optname, key);
     }
   }
   UNPROTECT(1);
