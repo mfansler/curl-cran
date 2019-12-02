@@ -4,8 +4,15 @@
 \alias{send_mail}
 \title{Send email}
 \usage{
-send_mail(mail_from, mail_rcpt, message, smtp_server = "localhost",
-  use_ssl = FALSE, verbose = TRUE, ...)
+send_mail(
+  mail_from,
+  mail_rcpt,
+  message,
+  smtp_server = "smtp://localhost",
+  use_ssl = c("try", "no", "force"),
+  verbose = TRUE,
+  ...
+)
 }
 \arguments{
 \item{mail_from}{email address of the sender.}
@@ -16,9 +23,13 @@ these go into the \code{message} headers.}
 \item{message}{either a string or connection with (properly formatted) email
 message, including sender/recipient/subject headers. See example.}
 
-\item{smtp_server}{address of the SMTP server without the \code{smtp://} part}
+\item{smtp_server}{hostname or address of the SMTP server, or, an
+\code{smtp://} or \code{smtps://} URL. See "Specifying the server, port,
+and protocol" below.}
 
-\item{use_ssl}{connect with the smtp server over TLS. Gmail requires this.}
+\item{use_ssl}{Request to upgrade the connection to SSL using the STARTTLS command,
+see \href{https://curl.haxx.se/libcurl/c/CURLOPT_USE_SSL.html}{CURLOPT_USE_SSL}
+for details. Default will try to SSL, proceed as normal otherwise.}
 
 \item{verbose}{print output}
 
@@ -28,24 +39,61 @@ with the SMTP server.}
 }
 \description{
 Use the curl SMTP client to send an email. The \code{message} argument must be
-properly formatted RFC2822 email message with From/To/Subject headers and CRLF
+properly formatted \href{https://tools.ietf.org/html/rfc2822}{RFC2822} email message with From/To/Subject headers and CRLF
 line breaks.
 }
-\examples{
-\donttest{# Message in RFC2822 format
-message <- 'From: "Testbot" <jeroen@ocpu.io>
-To: "Jeroen Ooms" <jeroenooms@gmail.com>
-Subject: Hello there!
+\section{Specifying the server, port, and protocol}{
 
-Hi Jeroen,
+
+The \code{smtp_server} argument takes a hostname, or an SMTP URL:
+
+\itemize{
+  \item \code{mail.example.com} - hostname only
+  \item \code{mail.example.com:587} - hostname and port
+  \item \code{smtp://mail.example.com} - protocol and hostname
+  \item \code{smtp://mail.example.com:587} - full SMTP URL
+  \item \code{smtps://mail.example.com:465} - full SMTPS URL
+}
+
+By default, the port will be 25, unless \code{smtps://} is specified--then
+the default will be 465 instead.
+}
+
+\section{Encrypting connections via SMTPS or STARTTLS}{
+
+
+There are two different ways in which SMTP can be encrypted: SMTPS servers
+run on a port which only accepts encrypted connections, similar to HTTPS.
+Alternatively, a regular insecure smtp connection can be "upgraded" to a
+secure TLS connection using the STARTTLS command. It is important to know
+which method your server expects.
+
+If your smtp server listens on port 465, then use a  \code{smtps://hostname:465}
+URL. The SMTPS protocol \emph{guarantees} that TLS will be used to protect
+all communications from the start.
+
+If your email server listens on port 25 or 587, use an \code{smtp://} URL in
+combination with the  \code{use_ssl} parameter to control if the connection
+should be upgraded with STARTTLS. The default value \code{"try"} will
+\emph{opportunistically} try to upgrade to a secure connection if the server
+supports it, and proceed as normal otherwise.
+}
+
+\examples{
+\donttest{# Set sender and recipients (email addresses only)
+recipients <- readline("Enter your email address to receive test: ")
+sender <- 'test@noreply.com'
+
+# Full email message in RFC2822 format
+message <- 'From: "R (curl package)" <test@noreply.com>
+To: "Roger Recipient" <roger@noreply.com>
+Subject: Hello R user!
+
+Dear R user,
+
 I am sending this email using curl.'
 
-
-# Actually send the email
-recipients <- c('test@opencpu.org', 'jeroenooms@gmail.com')
-sender <- 'test@ocpu.io'
-username <- 'mail@ocpu.io'
-password <- askpass::askpass(paste("SMTP server password for", username))
-send_mail(sender, recipients, smtp_server = 'smtp.mailgun.org',
-  message = message, username = username, password = password)}
+# Send the email
+send_mail(sender, recipients, message, smtp_server = 'smtps://smtp.gmail.com',
+  username = 'curlpackage', password  = 'qyyjddvphjsrbnlm')}
 }

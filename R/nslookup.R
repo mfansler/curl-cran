@@ -43,8 +43,9 @@ has_internet <- local({
     if(isTRUE(has_internet_via_proxy))
       return(TRUE)
 
-    # Method 1: try DNS lookup
-    if(length(nslookup("google.com", error = FALSE)))
+    # Method 1: try DNS lookup. May resolve to 8.8.8.8 or 8.8.4.4
+    ip_addr <- nslookup('dns.google.com', multiple = TRUE, error = FALSE, ipv4_only = TRUE)
+    if(any(c("8.8.4.4", "8.8.8.8") %in% ip_addr))
       return(TRUE)
 
     # Method 2: look for a proxy server
@@ -58,7 +59,7 @@ has_internet <- local({
     }
 
     # Try via a proxy (mostly for Windows)
-    test_url <- 'https://1.1.1.1'
+    test_url <- 'http://captive.apple.com/hotspot-detect.html'
     ie_proxy <- ie_get_proxy_for_url(test_url)
 
     handle <- if(any(!is.na(proxy_vars))){
@@ -72,7 +73,8 @@ has_internet <- local({
       return(FALSE)
     }
     req <- try(curl_fetch_memory(url = test_url, handle = handle), silent = TRUE)
-    has_internet_via_proxy <<- is.list(req) && identical(req$status_code, 200L)
+    has_internet_via_proxy <<- is.list(req) && identical(req$status_code, 200L) &&
+      grepl("Success", rawToChar(req$content))
     cat(ifelse(has_internet_via_proxy, "success!\n", "failed.\n"), file = stderr())
     return(has_internet_via_proxy)
   }
