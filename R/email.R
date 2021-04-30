@@ -47,13 +47,13 @@
 #' \code{smtp://} or \code{smtps://} URL. See "Specifying the server, port,
 #' and protocol" below.
 #' @param use_ssl Request to upgrade the connection to SSL using the STARTTLS command,
-#' see \href{https://curl.haxx.se/libcurl/c/CURLOPT_USE_SSL.html}{CURLOPT_USE_SSL}
+#' see \href{https://curl.se/libcurl/c/CURLOPT_USE_SSL.html}{CURLOPT_USE_SSL}
 #' for details. Default will try to SSL, proceed as normal otherwise.
 #' @param verbose print output
 #' @param ... other options passed to \code{\link{handle_setopt}}. In most cases
 #' you will need to set a \code{username} and \code{password} to authenticate
 #' with the SMTP server.
-#' @examples \donttest{# Set sender and recipients (email addresses only)
+#' @examples \dontrun{# Set sender and recipients (email addresses only)
 #' recipients <- readline("Enter your email address to receive test: ")
 #' sender <- 'test@noreply.com'
 #'

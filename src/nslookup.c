@@ -3,6 +3,11 @@
 int jeroen_win32_idn_to_ascii(const char *in, char **out);
 #endif
 
+//needed to expose inet_ntop
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#endif
+
 //getaddrinfo is an extension (not C99)
 #if !defined(_WIN32) && !defined(__sun) && !defined(_POSIX_C_SOURCE)
 #define _POSIX_C_SOURCE 200112L
@@ -14,7 +19,6 @@ int jeroen_win32_idn_to_ascii(const char *in, char **out);
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
-const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -71,30 +75,3 @@ SEXP R_nslookup(SEXP hostname, SEXP ipv4_only) {
   freeaddrinfo(addr);
   return out;
 }
-
-/* Fallback implementation for inet_ntop in Win32 */
-
-#if defined(_WIN32) && !defined(_WIN64)
-const char *inet_ntop(int af, const void *src, char *dst, socklen_t size)
-{
-  struct sockaddr_storage ss;
-  unsigned long s = size;
-
-  ZeroMemory(&ss, sizeof(ss));
-  ss.ss_family = af;
-
-  switch(af) {
-  case AF_INET:
-    ((struct sockaddr_in *)&ss)->sin_addr = *(struct in_addr *)src;
-    break;
-  case AF_INET6:
-    ((struct sockaddr_in6 *)&ss)->sin6_addr = *(struct in6_addr *)src;
-    break;
-  default:
-    return NULL;
-  }
-  /* cannot direclty use &size because of strict aliasing rules */
-  return (WSAAddressToString((struct sockaddr *)&ss, sizeof(ss), NULL, dst, &s) == 0)?
-  dst : NULL;
-}
-#endif
