@@ -1,7 +1,7 @@
 #' Send email
 #'
 #' Use the curl SMTP client to send an email. The \code{message} argument must be
-#' properly formatted \href{https://tools.ietf.org/html/rfc2822}{RFC2822} email message with From/To/Subject headers and CRLF
+#' properly formatted \href{https://www.rfc-editor.org/rfc/rfc2822}{RFC2822} email message with From/To/Subject headers and CRLF
 #' line breaks.
 #'
 #' @section Specifying the server, port, and protocol:
@@ -106,9 +106,9 @@ send_mail <- function(mail_from, mail_rcpt, message, smtp_server = 'smtp://local
     total_bytes <<- total_bytes + length(buf)
     if(verbose){
       if(length(buf)){
-        cat(sprintf("\rUploaded %d bytes...", total_bytes), file = stderr())
+        cat(sprintf("\rUploaded %.0f bytes...", total_bytes), file = stderr())
       } else {
-        cat(sprintf("\rUploaded %d bytes... all done!\n", total_bytes), file = stderr())
+        cat(sprintf("\rUploaded %.0f bytes... all done!\n", total_bytes), file = stderr())
       }
     }
     return(buf)

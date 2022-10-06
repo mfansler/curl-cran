@@ -33,7 +33,7 @@ SEXP R_set_bundle(SEXP path){
   return mkString(R_WINDOWS_CA_BUNDLE);
 }
 
-SEXP R_get_bundle(){
+SEXP R_get_bundle(void){
   return mkString(R_WINDOWS_CA_BUNDLE);
 }
 
@@ -104,7 +104,7 @@ static int xferinfo_callback(void *clientp, xftype dltotal, xftype dlnow, xftype
 }
 
 /* Set default headers here, these are only allocated once */
-static struct curl_slist * default_headers(){
+static struct curl_slist * default_headers(void){
   static struct curl_slist * headers = NULL;
   if(headers == NULL){
     headers = curl_slist_append(headers, "Expect:");
@@ -210,13 +210,13 @@ static void set_handle_defaults(reference *ref){
 #endif
 }
 
-SEXP R_new_handle(){
+SEXP R_new_handle(void){
   reference *ref = calloc(1, sizeof(reference));
   ref->refCount = 1;
   ref->handle = curl_easy_init();
   total_handles++;
   set_handle_defaults(ref);
-  SEXP prot = PROTECT(allocVector(VECSXP, 5)); //for protecting callback functions
+  SEXP prot = PROTECT(allocVector(VECSXP, 6)); //for protecting callback functions
   SEXP ptr = PROTECT(R_MakeExternalPtr(ref, R_NilValue, prot));
   R_RegisterCFinalizerEx(ptr, fin_handle, TRUE);
   setAttrib(ptr, R_ClassSymbol, mkString("curl_handle"));
@@ -314,6 +314,14 @@ SEXP R_handle_setopt(SEXP ptr, SEXP keys, SEXP values){
         (curl_debug_callback) R_curl_callback_debug));
       assert(curl_easy_setopt(handle, CURLOPT_DEBUGDATA, val));
       SET_VECTOR_ELT(prot, 4, val); //protect gc
+    } else if (key == CURLOPT_SSL_CTX_FUNCTION){
+      if (TYPEOF(val) != CLOSXP)
+        error("Value for option %s (%d) must be a function.", optname, key);
+
+      assert(curl_easy_setopt(handle, CURLOPT_SSL_CTX_FUNCTION,
+                              (curl_ssl_ctx_callback) R_curl_callback_ssl_ctx));
+      assert(curl_easy_setopt(handle, CURLOPT_SSL_CTX_DATA, val));
+      SET_VECTOR_ELT(prot, 5, val); //protect gc
     } else if (key == CURLOPT_URL) {
       /* always use utf-8 for urls */
       const char * url_utf8 = translateCharUTF8(STRING_ELT(val, 0));
@@ -336,9 +344,12 @@ SEXP R_handle_setopt(SEXP ptr, SEXP keys, SEXP values){
       }
       assert(curl_easy_setopt(handle, key, (curl_off_t) asReal(val)));
     } else if(r_curl_is_postfields_option(key) || r_curl_is_string_option(key)){
+      if(key == CURLOPT_POSTFIELDS){
+        key = CURLOPT_COPYPOSTFIELDS;
+      }
       switch (TYPEOF(val)) {
       case RAWSXP:
-        if(key == CURLOPT_POSTFIELDS || key == CURLOPT_COPYPOSTFIELDS)
+        if(key == CURLOPT_COPYPOSTFIELDS)
           assert(curl_easy_setopt(handle, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t) Rf_length(val)));
         assert(curl_easy_setopt(handle, key, RAW(val)));
         break;
@@ -447,7 +458,7 @@ SEXP make_rawvec(unsigned char *ptr, size_t size){
   return out;
 }
 
-SEXP make_namesvec(){
+SEXP make_namesvec(void){
   SEXP names = PROTECT(allocVector(STRSXP, 7));
   SET_STRING_ELT(names, 0, mkChar("url"));
   SET_STRING_ELT(names, 1, mkChar("status_code"));
@@ -485,6 +496,6 @@ SEXP R_get_handle_response(SEXP ptr){
   return make_handle_response(ref);
 }
 
-SEXP R_total_handles(){
+SEXP R_total_handles(void){
   return(ScalarInteger(total_handles));
 }
