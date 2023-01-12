@@ -180,6 +180,23 @@ handle_data <- function(handle){
   out
 }
 
+# This is for internal use in progress bars. When the download is complete,
+# the speed is equal to content-size / elapsed-time.
+#' @useDynLib curl R_get_handle_speed
+handle_speed <- function(handle){
+  .Call(R_get_handle_speed, handle)
+}
+
+#' @useDynLib curl R_get_handle_clength
+handle_clength <- function(handle){
+  .Call(R_get_handle_clength, handle)
+}
+
+#' @useDynLib curl R_get_handle_received
+handle_received <- function(handle){
+  .Call(R_get_handle_received, handle)
+}
+
 #' @export
 print.curl_handle <- function(x, ...){
   stopifnot(inherits(x, "curl_handle"))
@@ -193,7 +210,6 @@ print.curl_handle <- function(x, ...){
 total_handles <- function(){
   .Call(R_total_handles)
 }
-
 
 ## Some hacks for backward compatibilty
 fix_options <- function(opt_names){

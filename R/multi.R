@@ -1,7 +1,8 @@
-#' Async Multi Download
+#' Async Concurrent Requests
 #'
 #' AJAX style concurrent requests, possibly using HTTP/2 multiplexing.
 #' Results are only available via callback functions. Advanced use only!
+#' For downloading many files in parallel use [multi_download] instead.
 #'
 #' Requests are created in the usual way using a curl \link{handle} and added
 #' to the scheduler with \link{multi_add}. This function returns immediately
@@ -40,6 +41,7 @@
 #'
 #' @name multi
 #' @rdname multi
+#' @seealso Advanced download interface: [multi_download]
 #' @useDynLib curl R_multi_add
 #' @param handle a curl \link{handle} with preconfigured \code{url} option.
 #' @param done callback function for completed request. Single argument with

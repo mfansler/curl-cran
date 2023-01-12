@@ -13,8 +13,10 @@ extern SEXP R_curl_fetch_memory(SEXP, SEXP, SEXP);
 extern SEXP R_curl_getdate(SEXP);
 extern SEXP R_curl_version(void);
 extern SEXP R_download_curl(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
-extern SEXP R_get_bundle(void);
+extern SEXP R_get_handle_clength(SEXP);
 extern SEXP R_get_handle_cookies(SEXP);
+extern SEXP R_get_handle_speed(SEXP);
+extern SEXP R_get_handle_received(SEXP);
 extern SEXP R_get_handle_response(SEXP);
 extern SEXP R_get_proxy_for_url(SEXP, SEXP, SEXP);
 extern SEXP R_handle_getcustom(SEXP);
@@ -23,6 +25,7 @@ extern SEXP R_handle_reset(SEXP);
 extern SEXP R_handle_setform(SEXP, SEXP);
 extern SEXP R_handle_setheaders(SEXP, SEXP);
 extern SEXP R_handle_setopt(SEXP, SEXP, SEXP);
+extern SEXP R_option_types(void);
 extern SEXP R_multi_add(SEXP, SEXP, SEXP, SEXP, SEXP);
 extern SEXP R_multi_cancel(SEXP);
 extern SEXP R_multi_fdset(SEXP);
@@ -34,7 +37,6 @@ extern SEXP R_new_file_writer(SEXP);
 extern SEXP R_new_handle(void);
 extern SEXP R_nslookup(SEXP, SEXP);
 extern SEXP R_proxy_info(void);
-extern SEXP R_set_bundle(SEXP);
 extern SEXP R_split_string(SEXP, SEXP);
 extern SEXP R_total_handles(void);
 extern SEXP R_total_writers(void);
@@ -49,8 +51,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"R_curl_getdate",        (DL_FUNC) &R_curl_getdate,        1},
     {"R_curl_version",        (DL_FUNC) &R_curl_version,        0},
     {"R_download_curl",       (DL_FUNC) &R_download_curl,       6},
-    {"R_get_bundle",          (DL_FUNC) &R_get_bundle,          0},
+    {"R_get_handle_clength",  (DL_FUNC) &R_get_handle_clength,  1},
     {"R_get_handle_cookies",  (DL_FUNC) &R_get_handle_cookies,  1},
+    {"R_get_handle_speed",    (DL_FUNC) &R_get_handle_speed,    1},
+    {"R_get_handle_received", (DL_FUNC) &R_get_handle_received, 1},
     {"R_get_handle_response", (DL_FUNC) &R_get_handle_response, 1},
     {"R_get_proxy_for_url",   (DL_FUNC) &R_get_proxy_for_url,   3},
     {"R_handle_getcustom",    (DL_FUNC) &R_handle_getcustom,    1},
@@ -59,6 +63,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"R_handle_setform",      (DL_FUNC) &R_handle_setform,      2},
     {"R_handle_setheaders",   (DL_FUNC) &R_handle_setheaders,   2},
     {"R_handle_setopt",       (DL_FUNC) &R_handle_setopt,       3},
+    {"R_option_types",        (DL_FUNC) &R_option_types,        0},
     {"R_multi_add",           (DL_FUNC) &R_multi_add,           5},
     {"R_multi_cancel",        (DL_FUNC) &R_multi_cancel,        1},
     {"R_multi_fdset",         (DL_FUNC) &R_multi_fdset,         1},
@@ -70,7 +75,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"R_new_handle",          (DL_FUNC) &R_new_handle,          0},
     {"R_nslookup",            (DL_FUNC) &R_nslookup,            2},
     {"R_proxy_info",          (DL_FUNC) &R_proxy_info,          0},
-    {"R_set_bundle",          (DL_FUNC) &R_set_bundle,          1},
     {"R_split_string",        (DL_FUNC) &R_split_string,        2},
     {"R_total_handles",       (DL_FUNC) &R_total_handles,       0},
     {"R_total_writers",       (DL_FUNC) &R_total_writers,       0},

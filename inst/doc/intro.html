@@ -10,7 +10,7 @@
 
 
 
-<meta name="date" content="2022-10-06" />
+<meta name="date" content="2023-01-12" />
 
 <title>The curl package: a modern R interface to libcurl</title>
 
@@ -1372,23 +1372,17 @@ overflow-y: auto;
 border: 1px solid #ddd;
 border-radius: 4px;
 }
-.tabset-dropdown > .nav-tabs > li.active:before {
-content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+content: "\e259";
 font-family: 'Glyphicons Halflings';
 display: inline-block;
 padding: 10px;
 border-right: 1px solid #ddd;
 }
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-content: "";
-border: none;
-}
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-content: "";
+content: "\e258";
 font-family: 'Glyphicons Halflings';
-display: inline-block;
-padding: 10px;
-border-right: 1px solid #ddd;
+border: none;
 }
 .tabset-dropdown > .nav-tabs > li.active {
 display: block;
@@ -1498,7 +1492,7 @@ font-size: 0.95em;
 
 <h1 class="title toc-ignore">The curl package: a modern R interface to
 libcurl</h1>
-<h4 class="date">2022-10-06</h4>
+<h4 class="date">2023-01-12</h4>
 
 </div>
 
@@ -1538,11 +1532,11 @@ str(req)</code></pre>
  $ type       : chr &quot;application/json&quot;
  $ headers    : raw [1:202] 48 54 54 50 ...
  $ modified   : POSIXct[1:1], format: NA
- $ times      : Named num [1:6] 0 0.0751 0.2154 0.5478 0.7095 ...
+ $ times      : Named num [1:6] 0 0.104 0.203 0.412 0.529 ...
   ..- attr(*, &quot;names&quot;)= chr [1:6] &quot;redirect&quot; &quot;namelookup&quot; &quot;connect&quot; &quot;pretransfer&quot; ...
  $ content    : raw [1:370] 7b 0a 20 20 ...</code></pre>
 <pre class="r"><code>parse_headers(req$headers)</code></pre>
-<pre><code>[1] &quot;HTTP/2 200 &quot;                            &quot;date: Thu, 06 Oct 2022 17:34:34 GMT&quot;   
+<pre><code>[1] &quot;HTTP/2 200 &quot;                            &quot;date: Thu, 12 Jan 2023 13:33:16 GMT&quot;   
 [3] &quot;content-type: application/json&quot;         &quot;content-length: 370&quot;                   
 [5] &quot;server: gunicorn/19.9.0&quot;                &quot;access-control-allow-origin: *&quot;        
 [7] &quot;access-control-allow-credentials: true&quot;</code></pre>
@@ -1555,10 +1549,10 @@ str(req)</code></pre>
         &quot;Accept&quot;: &quot;*/*&quot;,
         &quot;Accept-Encoding&quot;: &quot;deflate, gzip&quot;,
         &quot;Host&quot;: &quot;eu.httpbin.org&quot;,
-        &quot;User-Agent&quot;: &quot;R (4.2.1 x86_64-apple-darwin17.0 x86_64 darwin17.0)&quot;,
-        &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-633f11aa-1db4d6234a86ec163f44c496&quot;
+        &quot;User-Agent&quot;: &quot;R (4.2.2 x86_64-apple-darwin17.0 x86_64 darwin17.0)&quot;,
+        &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-63c00c1c-4a96af5067e7fdee56a1baf7&quot;
     },
-    &quot;origin&quot;: &quot;37.12.134.218&quot;,
+    &quot;origin&quot;: &quot;77.161.191.18&quot;,
     &quot;url&quot;: &quot;https://eu.httpbin.org/get?foo=123&quot;
 }
  </code></pre>
@@ -1585,10 +1579,10 @@ jsonlite::prettify(readLines(tmp))</code></pre>
         &quot;Accept&quot;: &quot;*/*&quot;,
         &quot;Accept-Encoding&quot;: &quot;deflate, gzip&quot;,
         &quot;Host&quot;: &quot;eu.httpbin.org&quot;,
-        &quot;User-Agent&quot;: &quot;R (4.2.1 x86_64-apple-darwin17.0 x86_64 darwin17.0)&quot;,
-        &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-633f11aa-5dbee83505506e19098af905&quot;
+        &quot;User-Agent&quot;: &quot;R (4.2.2 x86_64-apple-darwin17.0 x86_64 darwin17.0)&quot;,
+        &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-63c00c1c-6679c4df2b19081f23271063&quot;
     },
-    &quot;origin&quot;: &quot;37.12.134.218&quot;,
+    &quot;origin&quot;: &quot;77.161.191.18&quot;,
     &quot;url&quot;: &quot;https://eu.httpbin.org/get?bar=456&quot;
 }
  </code></pre>
@@ -1618,10 +1612,10 @@ cat(out, sep = &quot;\n&quot;)</code></pre>
 out &lt;- readLines(con)
 close(con)
 cat(out, sep = &quot;\n&quot;)</code></pre>
-<pre><code>    &quot;User-Agent&quot;: &quot;R (4.2.1 x86_64-apple-darwin17.0 x86_64 darwin17.0)&quot;, 
-    &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-633f11ab-5a4a578404458f16089d2ae3&quot;
+<pre><code>    &quot;User-Agent&quot;: &quot;R (4.2.2 x86_64-apple-darwin17.0 x86_64 darwin17.0)&quot;, 
+    &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-63c00c1c-74a719fc19eb863a031af70d&quot;
   }, 
-  &quot;origin&quot;: &quot;37.12.134.218&quot;, 
+  &quot;origin&quot;: &quot;77.161.191.18&quot;, 
   &quot;url&quot;: &quot;https://eu.httpbin.org/get&quot;
 }</code></pre>
 <p>The example shows how to use <code>readLines</code> on an opened
@@ -1810,11 +1804,11 @@ symbol table. These symbol values never change, so you only need to
 lookup the value you need once and then hardcode the integer value in
 your R code.</p>
 <pre class="r"><code>curl::curl_symbols(&quot;CURLUSESSL&quot;)</code></pre>
-<pre><code>                  name introduced deprecated removed value type
-928     CURLUSESSL_ALL     7.17.0       &lt;NA&gt;    &lt;NA&gt;     3 &lt;NA&gt;
-929 CURLUSESSL_CONTROL     7.17.0       &lt;NA&gt;    &lt;NA&gt;     2 &lt;NA&gt;
-930    CURLUSESSL_NONE     7.17.0       &lt;NA&gt;    &lt;NA&gt;     0 &lt;NA&gt;
-931     CURLUSESSL_TRY     7.17.0       &lt;NA&gt;    &lt;NA&gt;     1 &lt;NA&gt;</code></pre>
+<pre><code>                   name introduced deprecated removed value type
+1071     CURLUSESSL_ALL     7.17.0       &lt;NA&gt;    &lt;NA&gt;     3 &lt;NA&gt;
+1072 CURLUSESSL_CONTROL     7.17.0       &lt;NA&gt;    &lt;NA&gt;     2 &lt;NA&gt;
+1073    CURLUSESSL_NONE     7.17.0       &lt;NA&gt;    &lt;NA&gt;     0 &lt;NA&gt;
+1074     CURLUSESSL_TRY     7.17.0       &lt;NA&gt;    &lt;NA&gt;     1 &lt;NA&gt;</code></pre>
 <p>So suppose we want to set <code>CURLOPT_USE_SSL</code> to
 <code>CURLUSESSL_ALL</code> we would use this R code:</p>
 <pre class="r"><code>handle_setopt(handle, use_ssl = 3)</code></pre>
@@ -1890,10 +1884,10 @@ jsonlite::prettify(rawToChar(req$content))</code></pre>
         &quot;Content-Type&quot;: &quot;text/moo&quot;,
         &quot;Host&quot;: &quot;eu.httpbin.org&quot;,
         &quot;User-Agent&quot;: &quot;A cow&quot;,
-        &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-633f11ad-4eaddea310685b1e409a938e&quot;
+        &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-63c00c1d-184aa53b7bb29fa820dff22f&quot;
     },
     &quot;json&quot;: null,
-    &quot;origin&quot;: &quot;37.12.134.218&quot;,
+    &quot;origin&quot;: &quot;77.161.191.18&quot;,
     &quot;url&quot;: &quot;https://eu.httpbin.org/post&quot;
 }
  </code></pre>
@@ -1920,10 +1914,10 @@ jsonlite::prettify(readLines(con))</code></pre>
         &quot;Content-Type&quot;: &quot;text/moo&quot;,
         &quot;Host&quot;: &quot;eu.httpbin.org&quot;,
         &quot;User-Agent&quot;: &quot;A cow&quot;,
-        &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-633f11ad-0946c157481a75ee743efe1e&quot;
+        &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-63c00c1e-542e52e72872cda65ec079e2&quot;
     },
     &quot;json&quot;: null,
-    &quot;origin&quot;: &quot;37.12.134.218&quot;,
+    &quot;origin&quot;: &quot;77.161.191.18&quot;,
     &quot;url&quot;: &quot;https://eu.httpbin.org/post&quot;
 }
  </code></pre>
@@ -1951,10 +1945,10 @@ jsonlite::prettify(readLines(tmp))</code></pre>
         &quot;Content-Type&quot;: &quot;text/moo&quot;,
         &quot;Host&quot;: &quot;eu.httpbin.org&quot;,
         &quot;User-Agent&quot;: &quot;A cow&quot;,
-        &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-633f11ad-7228301522ce7fb542876d0e&quot;
+        &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-63c00c1e-7883a13545e482746ff99209&quot;
     },
     &quot;json&quot;: null,
-    &quot;origin&quot;: &quot;37.12.134.218&quot;,
+    &quot;origin&quot;: &quot;77.161.191.18&quot;,
     &quot;url&quot;: &quot;https://eu.httpbin.org/post&quot;
 }
  </code></pre>
@@ -1980,10 +1974,10 @@ out &lt;- multi_run()</code></pre>
     &quot;Content-Type&quot;: &quot;text/moo&quot;, 
     &quot;Host&quot;: &quot;eu.httpbin.org&quot;, 
     &quot;User-Agent&quot;: &quot;A cow&quot;, 
-    &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-633f11ae-1a5a54a37fb9fc032ba16f0b&quot;
+    &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-63c00c1f-229cd1874d7a621625da72d4&quot;
   }, 
   &quot;json&quot;: null, 
-  &quot;origin&quot;: &quot;37.12.134.218&quot;, 
+  &quot;origin&quot;: &quot;77.161.191.18&quot;, 
   &quot;url&quot;: &quot;https://eu.httpbin.org/post&quot;
 }</code></pre>
 <div id="reading-cookies" class="section level3">
@@ -2036,11 +2030,11 @@ possible, eliminating TCP/SSL handshaking overhead:</p>
 <pre class="r"><code>req &lt;- curl_fetch_memory(&quot;https://api.github.com/users/ropensci&quot;)
 req$times</code></pre>
 <pre><code>     redirect    namelookup       connect   pretransfer starttransfer         total 
-     0.000000      0.055984      0.141243      0.250196      0.472442      0.476042 </code></pre>
+     0.000000      0.011840      0.028871      0.053738      0.198834      0.198901 </code></pre>
 <pre class="r"><code>req2 &lt;- curl_fetch_memory(&quot;https://api.github.com/users/rstudio&quot;)
 req2$times</code></pre>
 <pre><code>     redirect    namelookup       connect   pretransfer starttransfer         total 
-     0.000000      0.000030      0.000030      0.000116      0.228685      0.231317 </code></pre>
+     0.000000      0.000037      0.000037      0.000121      0.148984      0.149065 </code></pre>
 <p>If you really need to re-use a handle, do note that that curl does
 not cleanup the handle after each request. All of the options and
 internal fields will linger around for all future request until
@@ -2109,10 +2103,10 @@ new_handle() %&gt;%
         &quot;Content-Type&quot;: &quot;text/moo&quot;,
         &quot;Host&quot;: &quot;eu.httpbin.org&quot;,
         &quot;User-Agent&quot;: &quot;A cow&quot;,
-        &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-633f11b1-66074205062234201dddf314&quot;
+        &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-63c00c21-5c9cc38c0395a34a0f4405d1&quot;
     },
     &quot;json&quot;: null,
-    &quot;origin&quot;: &quot;37.12.134.218&quot;,
+    &quot;origin&quot;: &quot;77.161.191.18&quot;,
     &quot;url&quot;: &quot;https://eu.httpbin.org/post&quot;
 }
  </code></pre>

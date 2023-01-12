@@ -1371,23 +1371,17 @@ overflow-y: auto;
 border: 1px solid #ddd;
 border-radius: 4px;
 }
-.tabset-dropdown > .nav-tabs > li.active:before {
-content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+content: "\e259";
 font-family: 'Glyphicons Halflings';
 display: inline-block;
 padding: 10px;
 border-right: 1px solid #ddd;
 }
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-content: "";
-border: none;
-}
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-content: "";
+content: "\e258";
 font-family: 'Glyphicons Halflings';
-display: inline-block;
-padding: 10px;
-border-right: 1px solid #ddd;
+border: none;
 }
 .tabset-dropdown > .nav-tabs > li.active {
 display: block;
@@ -1529,24 +1523,29 @@ when the curl package is first loaded in your R session.</p>
 <tr class="odd">
 <td><strong>trust certificates</strong></td>
 <td>Windows Cert Store</td>
-<td><code>curl-ca-bundle.crt</code> file</td>
+<td>Windows Cert Store or <code>curl-ca-bundle.crt</code> file <a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></td>
 </tr>
 <tr class="even">
-<td><strong>works on corporate networks</strong></td>
-<td>Usually Yes</td>
-<td>Maybe not</td>
-</tr>
-<tr class="odd">
-<td><strong>support http proxy server</strong></td>
-<td>Yes</td>
-<td>Yes</td>
-</tr>
-<tr class="even">
-<td><strong>support https proxy server</strong></td>
+<td><strong>supports HTTP/2</strong></td>
 <td>No</td>
 <td>Yes</td>
 </tr>
 <tr class="odd">
+<td><strong>works on corporate networks</strong></td>
+<td>Usually Yes</td>
+<td>Maybe not</td>
+</tr>
+<tr class="even">
+<td><strong>support http proxy server</strong></td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr class="odd">
+<td><strong>support https proxy server</strong></td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr class="even">
 <td><strong>support client certificate authentication</strong></td>
 <td>No</td>
 <td>Yes</td>
@@ -1556,16 +1555,6 @@ when the curl package is first loaded in your R session.</p>
 <p>The default backend on Windows 7 and up is Secure Channel. This uses
 the native Windows SSL API and certificates, which is the safest choice
 for most users.</p>
-<p>To switch to OpenSSL, you need to set an environment variable <a href="https://curl.se/libcurl/c/libcurl-env.html"><code>CURL_SSL_BACKEND</code></a>
-to <code>&quot;openssl&quot;</code> when starting R. A good place to set this is
-in your <code>.Renviron</code> file in your user home (Documents)
-directory; the <code>?Startup</code> manual has more details.</p>
-<pre><code>CURL_SSL_BACKEND=openssl</code></pre>
-<p>Optionally, you can also set <code>CURL_CA_BUNDLE</code> here to use
-a custom trust bundle. If <code>CURL_CA_BUNDLE</code> is not set, we use
-<code>curl-ca-bundle.crt</code> which is included with R for Windows.
-When using Schannel, no trust bundle is needed because we use the
-certificates from the native Windows cert store.</p>
 <p>Have a look at <code>curl::curl_version()</code> to see which ssl
 backends are available and which one is in use.</p>
 <pre class="r"><code>curl::curl_version()
@@ -1580,7 +1569,22 @@ backends are available and which one is in use.</p>
 #&gt; ...</code></pre>
 <p>The part in parentheses means this backend is available but currently
 not in use. Hence the output above means that the current active backend
-is Secure Channel, but OpenSSL is also supported.</p>
+is Secure Channel, but OpenSSL is also supported, but currently not in
+use.</p>
+<p>To switch to OpenSSL, you need to set an environment variable <a href="https://curl.se/libcurl/c/libcurl-env.html"><code>CURL_SSL_BACKEND</code></a>
+to <code>&quot;openssl&quot;</code> when starting R. A good place to set this is
+in your <code>.Renviron</code> file in your user home (Documents)
+directory; the <code>?Startup</code> manual has more details. The
+following will write to your <code>~/.Renviron</code> file.</p>
+<pre class="r"><code>write(&#39;CURL_SSL_BACKEND=openssl&#39;, file = &quot;~/.Renviron&quot;, append = TRUE)</code></pre>
+<p>Now if you restart R, the default back-end should have changed:</p>
+<pre class="r"><code>&gt; curl::curl_version()$ssl_version
+[1] &quot;OpenSSL/1.1.1m (Schannel)&quot;</code></pre>
+<p>Optionally, you can also set <code>CURL_CA_BUNDLE</code> in your
+<code>~/.Renviron</code> to use a custom trust bundle. If
+<code>CURL_CA_BUNDLE</code> is not set, we use the Windows cert store.
+When using Schannel, no trust bundle can be specified because we always
+use the certificates from the native Windows cert store.</p>
 <p>It is not possible to change the SSL backend once the
 <code>curl</code> package has been loaded.</p>
 </div>
@@ -1608,20 +1612,20 @@ libcurl homepage.</p>
 <pre class="r"><code>curl_options(&#39;proxy&#39;)</code></pre>
 <pre><code>##        haproxyprotocol        httpproxytunnel                noproxy              pre_proxy                  proxy 
 ##                    274                     61                  10177                  10262                  10004 
-##           proxy_cainfo      proxy_cainfo_blob           proxy_capath          proxy_crlfile       proxy_issuercert 
-##                  10246                  40310                  10247                  10260                  10296 
-##  proxy_issuercert_blob        proxy_keypasswd  proxy_pinnedpublickey     proxy_service_name  proxy_ssl_cipher_list 
-##                  40297                  10258                  10263                  10235                  10259 
-##      proxy_ssl_options   proxy_ssl_verifyhost   proxy_ssl_verifypeer          proxy_sslcert     proxy_sslcert_blob 
-##                    261                    249                    248                  10254                  40293 
-##      proxy_sslcerttype           proxy_sslkey      proxy_sslkey_blob       proxy_sslkeytype       proxy_sslversion 
-##                  10255                  10256                  40294                  10257                    250 
-##    proxy_tls13_ciphers proxy_tlsauth_password     proxy_tlsauth_type proxy_tlsauth_username    proxy_transfer_mode 
-##                  10277                  10252                  10253                  10251                    166 
 ##              proxyauth            proxyheader          proxypassword              proxyport              proxytype 
 ##                    111                  10228                  10176                     59                    101 
-##          proxyusername           proxyuserpwd 
-##                  10175                  10006</code></pre>
+##          proxyusername           proxyuserpwd           proxy_cainfo      proxy_cainfo_blob           proxy_capath 
+##                  10175                  10006                  10246                  40310                  10247 
+##          proxy_crlfile       proxy_issuercert  proxy_issuercert_blob        proxy_keypasswd  proxy_pinnedpublickey 
+##                  10260                  10296                  40297                  10258                  10263 
+##     proxy_service_name          proxy_sslcert      proxy_sslcerttype     proxy_sslcert_blob           proxy_sslkey 
+##                  10235                  10254                  10255                  40293                  10256 
+##       proxy_sslkeytype      proxy_sslkey_blob       proxy_sslversion  proxy_ssl_cipher_list      proxy_ssl_options 
+##                  10257                  40294                    250                  10259                    261 
+##   proxy_ssl_verifyhost   proxy_ssl_verifypeer    proxy_tls13_ciphers proxy_tlsauth_password     proxy_tlsauth_type 
+##                    249                    248                  10277                  10252                  10253 
+## proxy_tlsauth_username    proxy_transfer_mode 
+##                  10251                    166</code></pre>
 <p>To use a global proxy server for all your requests, you can set the
 environment variable <code>http_proxy</code> (lowercase!) or
 <code>https_proxy</code> or <code>ALL_PROXY</code>. See <a href="https://curl.se/libcurl/c/libcurl-env.html">this page</a> for
@@ -1683,6 +1687,14 @@ One day we could try to make the <code>curl</code> package automatically
 discover and apply Windows proxy settings. However to make sure we cover
 all edge cases we need more examples from users in real world corporate
 networks.</p>
+</div>
+<div class="footnotes footnotes-end-of-document">
+<hr />
+<ol>
+<li id="fn1"><p>As of version 5 we now default to <a href="https://curl.se/libcurl/c/CURLOPT_SSL_OPTIONS.html"><code>CURLSSLOPT_NATIVE_CA</code></a>.
+To use a traditional PEM bundle set the CURL_CA_BUNDLE environment
+variable.<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+</ol>
 </div>
 
 

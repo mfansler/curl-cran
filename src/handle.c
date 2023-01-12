@@ -26,17 +26,6 @@ extern int r_curl_is_postfields_option(CURLoption x);
 #define HAS_CURLOPT_EXPECT_100_TIMEOUT_MS 1
 #endif
 
-char R_WINDOWS_CA_BUNDLE[MAX_PATH];
-
-SEXP R_set_bundle(SEXP path){
-  strcpy(R_WINDOWS_CA_BUNDLE, CHAR(asChar(path)));
-  return mkString(R_WINDOWS_CA_BUNDLE);
-}
-
-SEXP R_get_bundle(void){
-  return mkString(R_WINDOWS_CA_BUNDLE);
-}
-
 int total_handles = 0;
 
 void clean_handle(reference *ref){
@@ -134,19 +123,15 @@ static void set_handle_defaults(reference *ref){
 
   /* Only set a default CA bundle for openssl */
   #ifdef _WIN32
+  curl_easy_setopt(handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NO_REVOKE);
   struct curl_tlssessioninfo *tlsinfo = NULL;
   if(curl_easy_getinfo(handle, CURLINFO_TLS_SSL_PTR, &tlsinfo) == CURLE_OK){
     if(tlsinfo->backend == CURLSSLBACKEND_OPENSSL) {
       const char *ca_bundle = getenv("CURL_CA_BUNDLE");
       if(ca_bundle != NULL) {
         curl_easy_setopt(handle, CURLOPT_CAINFO, ca_bundle);
-      } else if( R_WINDOWS_CA_BUNDLE != NULL && strlen(R_WINDOWS_CA_BUNDLE)){
-        /* on windows a cert bundle is included with R version 3.2.0 */
-        curl_easy_setopt(handle, CURLOPT_CAINFO, R_WINDOWS_CA_BUNDLE);
       } else {
-        /* disable cert validation for older versions of R */
-        curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0L);
-        curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+        curl_easy_setopt(handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NO_REVOKE | CURLSSLOPT_NATIVE_CA);
       }
     }
   }
@@ -190,11 +175,6 @@ static void set_handle_defaults(reference *ref){
 
   /* dummy readfunction because default can freeze R */
   assert(curl_easy_setopt(handle, CURLOPT_READFUNCTION, dummy_read));
-
-  /* seems to be needed for native WinSSL */
-#ifdef _WIN32
-  curl_easy_setopt(handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NO_REVOKE);
-#endif
 
   /* set default progress printer (disabled by default) */
 #ifdef HAS_XFERINFOFUNCTION
@@ -495,6 +475,50 @@ SEXP R_get_handle_response(SEXP ptr){
   reference *ref = get_ref(ptr);
   return make_handle_response(ref);
 }
+
+SEXP R_get_handle_speed(SEXP ptr){
+  CURL *handle = get_handle(ptr);
+#ifdef USE_CURL_OFF_T
+  curl_off_t dl = 0;
+  curl_off_t ul = 0;
+  curl_easy_getinfo(handle, CURLINFO_SPEED_DOWNLOAD_T, &dl);
+  curl_easy_getinfo(handle, CURLINFO_SPEED_UPLOAD_T, &ul);
+#else
+  double dl = 0;
+  double ul = 0;
+  curl_easy_getinfo(handle, CURLINFO_SPEED_DOWNLOAD, &dl);
+  curl_easy_getinfo(handle, CURLINFO_SPEED_UPLOAD, &ul);
+#endif
+  SEXP out = Rf_allocVector(REALSXP, 2);
+  REAL(out)[0] = (double) dl;
+  REAL(out)[1] = (double) ul;
+  return out;
+}
+
+SEXP R_get_handle_clength(SEXP ptr){
+  CURL *handle = get_handle(ptr);
+#ifdef USE_CURL_OFF_T
+  curl_off_t cl = 0;
+  curl_easy_getinfo(handle, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &cl);
+#else
+  double cl = 0;
+  curl_easy_getinfo(handle, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &cl);
+#endif
+  return Rf_ScalarReal((double) cl < 0 ? NA_REAL : cl);
+}
+
+SEXP R_get_handle_received(SEXP ptr){
+  CURL *handle = get_handle(ptr);
+#ifdef USE_CURL_OFF_T
+  curl_off_t dl = 0;
+  curl_easy_getinfo(handle, CURLINFO_SIZE_DOWNLOAD_T, &dl);
+#else
+  double dl = 0;
+  curl_easy_getinfo(handle, CURLINFO_SIZE_DOWNLOAD, &dl);
+#endif
+  return Rf_ScalarReal((double) dl);
+}
+
 
 SEXP R_total_handles(void){
   return(ScalarInteger(total_handles));

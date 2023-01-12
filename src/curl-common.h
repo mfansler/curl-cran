@@ -1,4 +1,8 @@
 #include <Rinternals.h>
+
+/* for now we use the old form APIs to support older distros */
+#define CURL_DISABLE_DEPRECATION 1
+
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <string.h>
@@ -6,6 +10,16 @@
 
 #if LIBCURL_VERSION_MAJOR > 7 || (LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR >= 28)
 #define HAS_MULTI_WAIT 1
+#endif
+
+#if LIBCURL_VERSION_MAJOR > 7 || (LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR >= 55)
+#define USE_CURL_OFF_T 1
+#endif
+
+#ifndef DISABLE_CURL_EASY_OPTION
+#if LIBCURL_VERSION_MAJOR > 7 || (LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR >= 73)
+#define HAS_CURL_EASY_OPTION 1
+#endif
 #endif
 
 typedef struct {
