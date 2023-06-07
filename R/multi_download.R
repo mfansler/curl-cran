@@ -91,7 +91,7 @@
 #' pkg_url_checker <- function(dir){
 #'   db <- tools:::url_db_from_package_sources(dir)
 #'   res <- multi_download(db$URL, rep('/dev/null', nrow(db)), nobody=TRUE)
-#'   db$OK <- res$status == 200
+#'   db$OK <- res$status_code == 200
 #'   db
 #' }
 #'
@@ -144,6 +144,13 @@ multi_download <- function(urls, destfiles = NULL, resume = FALSE, progress = TR
       expected[i] <<- handle_received(handle) + resumefrom[i]
       success[i] <<- TRUE
       dlspeed[i] <<- 0
+      if(expected[i] == 0 && !file.exists(dest)){
+        file.create(dest) #create empty file
+      }
+      mtime <- handle_mtime(handle)
+      if(!is.na(mtime)){
+        Sys.setFileTime(dest, handle_mtime(handle))
+      }
     }, fail = function(err){
       expected[i] <<- handle_received(handle) + resumefrom[i]
       success[i] <<- FALSE
