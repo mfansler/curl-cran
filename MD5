@@ -1,7 +1,7 @@
-027e18b02a0c58e9d3bd946c9cf0ec06 *DESCRIPTION
+6cc012e19d3dfe9ceaf767d060b2ebaf *DESCRIPTION
 bde9864c77c0a636443ae012aa5f092f *LICENSE
 0586edbda6f3eabdd4dad14fbce8f0e4 *NAMESPACE
-7f7e51ac34f4e36e195d971af033b481 *NEWS
+258371a7924771b0f3eb8100fd968530 *NEWS
 9881a4bcc9fb5c02c3815f59cc6cba12 *R/curl.R
 047793044be4cdc99034c2c9c497c6da *R/download.R
 ae09b1376a69f308b7474ad2e0b825fc *R/echo.R
@@ -11,7 +11,7 @@ c6c5182b1629ba6080707e80026cf3ca *R/escape.R
 ffc039398118107c638a59a11805c1a1 *R/form.R
 7f30c362f661fdb5fee22a0673c8d375 *R/handle.R
 8be3c61faab5ffe5917cfdc76f2c1c05 *R/multi.R
-4a71d95a4c91f7d07c0742426dad769c *R/multi_download.R
+0b823b039f99d0c387ba120b03bd16a8 *R/multi_download.R
 e82e6007b08e39205ddb0e09f52fdc35 *R/nslookup.R
 60bb1d0357ca519e34f43fd0a8e0bfd6 *R/onload.R
 57584ad56ab1fa3344900d75ddb3d43b *R/options.R
@@ -28,7 +28,7 @@ d41d8cd98f00b204e9800998ecf8427e *configure.win
 c8decf36390a4d213efe619440ffc702 *inst/WORDLIST
 20ccfcecfaae6ae7dd4349de7ff5bdd9 *inst/doc/intro.R
 7a7c0d1bc81fa4c150db5c29b0a54de4 *inst/doc/intro.Rmd
-90d14dcef44013478c9330031879f268 *inst/doc/intro.html
+5730de0f4514e61f397a9fa5b1e4d8fc *inst/doc/intro.html
 cb98c2db09777e92b915cae3571feea6 *inst/doc/windows.R
 18242a1f1ed89e6ea5030a13a2634780 *inst/doc/windows.Rmd
 7edcb7bb47f993a80471b5c99d6c9194 *inst/doc/windows.html
@@ -44,15 +44,14 @@ c8aba24574e6db7ca4f05e898c11af84 *man/handle.Rd
 5ffaf83f4ddb0e21bc3915fab14b4f61 *man/handle_cookies.Rd
 24879c434fccdee01adc5898e490188f *man/ie_proxy.Rd
 b04a3813d7a549663b022f236fa15634 *man/multi.Rd
-3483e90a3e568e67a2b7997a8f8c8790 *man/multi_download.Rd
+08a9e446c5fc041fcd4a307b91a4f679 *man/multi_download.Rd
 1e620757f0b3c9f9a13e1515bbd112b3 *man/multipart.Rd
 de88e7042890cd75989d4c603f3a6f9e *man/nslookup.Rd
 c3175e1371fa28d57c203d2af8fcd60b *man/parse_date.Rd
 c976314058dd2054466ec99f4a5c4934 *man/parse_headers.Rd
 81c4175d9f0f67436ddd363829e05040 *man/send_mail.Rd
 fdb5a38c510e57352a6d8fce2e15d977 *src/Makevars.in
-2cec33791efd347cbcb051402d7cf9c4 *src/Makevars.ucrt
-2e06f3f6efa53696e631edafbf6a7dbc *src/Makevars.win
+7626107f3d914953111a8ed5da363279 *src/Makevars.win
 be7df2f642d1db53451a594fc8153d67 *src/callbacks.c
 0116f70cd11872ef3b82667151af0cb3 *src/callbacks.h
 3e4d0149d963066026f063e661d6be90 *src/curl-common.h
@@ -78,7 +77,7 @@ e19e6d9f5738a66ec313e9f8a77d92f8 *src/typelist.h
 b3b011f708bbd17de19a4fb9b51e0dc4 *src/utils.c
 faf7928f66089f4f29eef73109de9e89 *src/version.c
 b91834f5e6c4451cdeea84e407dee779 *src/winidn.c
-ed05fbefdb0de29d2a09c71d322757f8 *src/writer.c
+7432d84302acc750b94ea0dee91eb7a4 *src/writer.c
 363571f48003b653997d6901c1844727 *tests/engine.R
 41dc6de9e30a19e502e01e699c9c07c4 *tests/engine.Rout.save
 0622a97a2aaa3c342f09636052c2d7f5 *tests/spelling.R
@@ -108,6 +107,6 @@ fbac58c32048614532370685af4bfb1b *tools/symbols-in-versions
 2c135fd3beb1ea058afdf519fe414235 *tools/symbols.R
 d069ed53e9c88e45193720b3c20d9f3c *tools/typelist.R
 6f3d6bbc5946a8893ae85cd1aa1b0465 *tools/typelist.h.in
-5b4aef5a162bd6e6dfcd8e82b05ac2e2 *tools/winlibs.R
+106096bf43a12f11883b2d8ceaf0da56 *tools/winlibs.R
 7a7c0d1bc81fa4c150db5c29b0a54de4 *vignettes/intro.Rmd
 18242a1f1ed89e6ea5030a13a2634780 *vignettes/windows.Rmd

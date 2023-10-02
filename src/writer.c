@@ -1,5 +1,8 @@
 #include <Rinternals.h>
 
+#include <errno.h>
+#include <string.h>
+
 static int total_open_writers = 0;
 
 void fin_file_writer(SEXP ptr){
@@ -19,8 +22,10 @@ SEXP R_write_file_writer(SEXP ptr, SEXP buf, SEXP close){
       SEXP path = VECTOR_ELT(R_ExternalPtrTag(ptr), 0);
       SEXP append = VECTOR_ELT(R_ExternalPtrTag(ptr), 1);
       fp = fopen(CHAR(STRING_ELT(path, 0)), Rf_asLogical(append) ? "ab" : "wb");
-      if(!fp)
-        Rf_error("Failed to open file: %s", CHAR(STRING_ELT(path, 0)));
+      if(!fp){
+        const char *errmsg =  strerror(errno);
+        Rf_error("Failed to open file: %s\n%s", CHAR(STRING_ELT(path, 0)), errmsg);
+      }
       R_SetExternalPtrAddr(ptr, fp);
       total_open_writers++;
     }
