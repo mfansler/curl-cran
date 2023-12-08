@@ -1,4 +1,4 @@
-## ---- echo = FALSE, message = FALSE-----------------------------------------------------------------------------------
+## ----echo = FALSE, message = FALSE------------------------------------------------------------------------------------
 knitr::opts_chunk$set(comment = "")
 options(width = 120, max.print = 100)
 wrap.simpleError <- function(x, options) {
@@ -35,7 +35,7 @@ out <- readLines(con)
 close(con)
 cat(out, sep = "\n")
 
-## ---- eval=FALSE------------------------------------------------------------------------------------------------------
+## ----eval=FALSE-------------------------------------------------------------------------------------------------------
 #  # This httpbin mirror doesn't cache
 #  con <- curl("https://nghttp2.org/httpbin/drip?duration=1&numbytes=50")
 #  open(con, "rb", blocking = FALSE)
@@ -64,7 +64,7 @@ curl_download('https://cloud.r-project.org/CRAN_mirrors.csv', 'mirrors.csv')
 mirros <- read.csv('mirrors.csv')
 unlink('mirrors.csv')
 
-## ---- echo = FALSE, message = FALSE, warning=FALSE--------------------------------------------------------------------
+## ----echo = FALSE, message = FALSE, warning=FALSE---------------------------------------------------------------------
 close(con)
 rm(con)
 
@@ -93,7 +93,7 @@ handle_setheaders(h,
 ## ---------------------------------------------------------------------------------------------------------------------
 handle <- new_handle(verbose = TRUE)
 
-## ---- error = TRUE----------------------------------------------------------------------------------------------------
+## ----error = TRUE-----------------------------------------------------------------------------------------------------
 # URLOPT_MASFILESIZE must be a number
 handle_setopt(handle, maxfilesize = "foo")
 
@@ -121,7 +121,7 @@ jsonlite::prettify(rawToChar(req$content))
 con <- curl("https://hb.cran.dev/post", handle = h)
 jsonlite::prettify(readLines(con))
 
-## ---- echo = FALSE, message = FALSE, warning=FALSE--------------------------------------------------------------------
+## ----echo = FALSE, message = FALSE, warning=FALSE---------------------------------------------------------------------
 close(con)
 
 ## ---------------------------------------------------------------------------------------------------------------------
