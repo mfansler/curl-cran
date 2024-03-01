@@ -177,12 +177,13 @@ handle_setform(h,
 )
 req <- curl_fetch_memory("https://hb.cran.dev/post", handle = h)
 
-## ---------------------------------------------------------------------------------------------------------------------
-library(magrittr)
+## ----eval=getRversion() > "4.1"---------------------------------------------------------------------------------------
+# Perform request
+res <- new_handle() |>
+  handle_setopt(copypostfields = "moo=moomooo") |>
+  handle_setheaders("Content-Type"="text/moo", "Cache-Control"="no-cache", "User-Agent"="A cow") |>
+  curl_fetch_memory(url = "https://hb.cran.dev/post")
 
-new_handle() %>%
-  handle_setopt(copypostfields = "moo=moomooo") %>%
-  handle_setheaders("Content-Type"="text/moo", "Cache-Control"="no-cache", "User-Agent"="A cow") %>%
-  curl_fetch_memory(url = "https://hb.cran.dev/post") %$% content %>% 
-  rawToChar %>% jsonlite::prettify()
+# Parse response
+res$content |> rawToChar() |> jsonlite::prettify()
 

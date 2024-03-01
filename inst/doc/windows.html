@@ -1604,22 +1604,22 @@ seems to be the problem. Note that curl supports many options related to
 proxies (types, auth, etc), the details of which you can find on the
 libcurl homepage.</p>
 <pre class="r"><code>curl_options(&#39;proxy&#39;)</code></pre>
-<pre><code>##        haproxyprotocol        httpproxytunnel                noproxy              pre_proxy                  proxy 
-##                    274                     61                  10177                  10262                  10004 
-##              proxyauth            proxyheader          proxypassword              proxyport              proxytype 
-##                    111                  10228                  10176                     59                    101 
-##          proxyusername           proxyuserpwd           proxy_cainfo      proxy_cainfo_blob           proxy_capath 
-##                  10175                  10006                  10246                  40310                  10247 
-##          proxy_crlfile       proxy_issuercert  proxy_issuercert_blob        proxy_keypasswd  proxy_pinnedpublickey 
-##                  10260                  10296                  40297                  10258                  10263 
-##     proxy_service_name          proxy_sslcert      proxy_sslcerttype     proxy_sslcert_blob           proxy_sslkey 
-##                  10235                  10254                  10255                  40293                  10256 
-##       proxy_sslkeytype      proxy_sslkey_blob       proxy_sslversion  proxy_ssl_cipher_list      proxy_ssl_options 
-##                  10257                  40294                    250                  10259                    261 
-##   proxy_ssl_verifyhost   proxy_ssl_verifypeer    proxy_tls13_ciphers proxy_tlsauth_password     proxy_tlsauth_type 
-##                    249                    248                  10277                  10252                  10253 
-## proxy_tlsauth_username    proxy_transfer_mode 
-##                  10251                    166</code></pre>
+<pre><code>##        haproxyprotocol      haproxy_client_ip        httpproxytunnel                noproxy              pre_proxy 
+##                    274                  10323                     61                  10177                  10262 
+##                  proxy              proxyauth            proxyheader          proxypassword              proxyport 
+##                  10004                    111                  10228                  10176                     59 
+##              proxytype          proxyusername           proxyuserpwd           proxy_cainfo      proxy_cainfo_blob 
+##                    101                  10175                  10006                  10246                  40310 
+##           proxy_capath          proxy_crlfile       proxy_issuercert  proxy_issuercert_blob        proxy_keypasswd 
+##                  10247                  10260                  10296                  40297                  10258 
+##  proxy_pinnedpublickey     proxy_service_name          proxy_sslcert      proxy_sslcerttype     proxy_sslcert_blob 
+##                  10263                  10235                  10254                  10255                  40293 
+##           proxy_sslkey       proxy_sslkeytype      proxy_sslkey_blob       proxy_sslversion  proxy_ssl_cipher_list 
+##                  10256                  10257                  40294                    250                  10259 
+##      proxy_ssl_options   proxy_ssl_verifyhost   proxy_ssl_verifypeer    proxy_tls13_ciphers proxy_tlsauth_password 
+##                    261                    249                    248                  10277                  10252 
+##     proxy_tlsauth_type proxy_tlsauth_username    proxy_transfer_mode 
+##                  10253                  10251                    166</code></pre>
 <p>To use a global proxy server for all your requests, you can set the
 environment variable <code>http_proxy</code> (lowercase!) or
 <code>https_proxy</code> or <code>ALL_PROXY</code>. See <a href="https://curl.se/libcurl/c/libcurl-env.html">this page</a> for
