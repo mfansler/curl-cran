@@ -1,7 +1,7 @@
-e26102c691a44d76bd25ebe1a9373ce1 *DESCRIPTION
+99fe930828b55613c5dfeef4d59b3496 *DESCRIPTION
 bde9864c77c0a636443ae012aa5f092f *LICENSE
 c12b4f608cf8287063e5cf8a7faa6908 *NAMESPACE
-4ea28cfa5cc8e3b79bedc1f9112d1e1d *NEWS
+9993f42ed5397c5ce0e88993a1112c2b *NEWS
 9881a4bcc9fb5c02c3815f59cc6cba12 *R/curl.R
 047793044be4cdc99034c2c9c497c6da *R/download.R
 eae29e69740e1a22bce4a8f35169ea51 *R/echo.R
@@ -21,14 +21,14 @@ a057a26a13e95f7298be7f71c65bbbff *R/sysdata.rda
 30fa8457defc49f9d758d9757ec9ff1c *R/upload.R
 8555354326143e99589d75671ef314d1 *R/utilities.R
 4c070bd798b05d76c32919cb203369c7 *R/writer.R
-1f30656a2421878cf28e5c9c3d2d7538 *build/vignette.rds
+bf84e2fe3cf7e7f0502a903b3dfbd24c *build/vignette.rds
 bc7baead3b6080f04dc81efd2fe1ff39 *cleanup
-8485c538519b5ffe3a530bb7b5987298 *configure
+b21605f0d1d86d48ef7ce4d9f4ab87dd *configure
 d41d8cd98f00b204e9800998ecf8427e *configure.win
 c8decf36390a4d213efe619440ffc702 *inst/WORDLIST
 514ae5c48a8a1f90618a169c83c2adc8 *inst/doc/intro.R
 a8eb5f954a1b3e2fa053b43b37053f6c *inst/doc/intro.Rmd
-1eba58ea13a148020d26691e14bf1504 *inst/doc/intro.html
+b3b6912511b0dc9e58fdea706266e632 *inst/doc/intro.html
 cb98c2db09777e92b915cae3571feea6 *inst/doc/windows.R
 18242a1f1ed89e6ea5030a13a2634780 *inst/doc/windows.Rmd
 89418c228e807dda0928956cb594ea9c *inst/doc/windows.html
@@ -63,7 +63,7 @@ df117e6b30086cb29d16780399825811 *src/fetch.c
 eb28cfd81ed27acf11b4b2e1e78e70bc *src/findport.c
 675ea8c9850ef9498875e34f837f2c1a *src/form.c
 0b962f7e21633b0e42442054cfd65b35 *src/getdate.c
-56f54a9b7322d07dd7e9651a08e07dbc *src/handle.c
+1e6249d7fa909a80964269c0d752772e *src/handle.c
 9bd503611860b0dc45771338f7271064 *src/ieproxy.c
 6b3822e4bec72879d4054e760ca36b60 *src/init.c
 4033dbf3c3c9b1c2679106dc1f372bdc *src/interrupt.c
@@ -86,8 +86,8 @@ b91834f5e6c4451cdeea84e407dee779 *src/winidn.c
 c97d6b3c39ebc805b223a643fea7d8a8 *tests/testthat/helper-version.R
 bbbd697e81545d0a97fa262c18262155 *tests/testthat/test-auth.R
 2e3643b5e6c3488da927337b98d0fe73 *tests/testthat/test-blockopen.R
-861a1ae673619b04f8b6c812b6e22216 *tests/testthat/test-certificates.R
-17857acb1bd8f16af0c43be20a5c9d51 *tests/testthat/test-connection.R
+13d5ff7fd10f7b5b1abae200b0d23056 *tests/testthat/test-certificates.R
+2a6a78c996811719591a4fe64b354c73 *tests/testthat/test-connection.R
 2870a87310437545182a67a9c8570d6e *tests/testthat/test-cookies.R
 e6e461cfb401653e3d7e3a6bcfdf2e8e *tests/testthat/test-echo.R
 c48bedfac6e4bf4220023269451ef0e6 *tests/testthat/test-escape.R
