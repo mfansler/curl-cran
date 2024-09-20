@@ -1,7 +1,7 @@
-99fe930828b55613c5dfeef4d59b3496 *DESCRIPTION
+467d4f7dc3d8021d1386446eeed0e8df *DESCRIPTION
 bde9864c77c0a636443ae012aa5f092f *LICENSE
 c12b4f608cf8287063e5cf8a7faa6908 *NAMESPACE
-9993f42ed5397c5ce0e88993a1112c2b *NEWS
+ce8a4d6bf13e3e7c9077cd4c5e0ec0c7 *NEWS
 9881a4bcc9fb5c02c3815f59cc6cba12 *R/curl.R
 047793044be4cdc99034c2c9c497c6da *R/download.R
 eae29e69740e1a22bce4a8f35169ea51 *R/echo.R
@@ -28,10 +28,10 @@ d41d8cd98f00b204e9800998ecf8427e *configure.win
 c8decf36390a4d213efe619440ffc702 *inst/WORDLIST
 514ae5c48a8a1f90618a169c83c2adc8 *inst/doc/intro.R
 a8eb5f954a1b3e2fa053b43b37053f6c *inst/doc/intro.Rmd
-b3b6912511b0dc9e58fdea706266e632 *inst/doc/intro.html
+3b8c6a3d3ea06a36fcc9191586d40d90 *inst/doc/intro.html
 cb98c2db09777e92b915cae3571feea6 *inst/doc/windows.R
 18242a1f1ed89e6ea5030a13a2634780 *inst/doc/windows.Rmd
-89418c228e807dda0928956cb594ea9c *inst/doc/windows.html
+09820c899e70c95b59a91ae239ec6774 *inst/doc/windows.html
 abf9ea4168322588ba0c1554b64dcb4f *man/curl.Rd
 f7950a29299d6e63525c73746f072c25 *man/curl_download.Rd
 635063b2bb193821a595668a4c98ccb1 *man/curl_echo.Rd
@@ -79,8 +79,6 @@ bb41f4f769243b4aa954f3a096b70240 *src/utils.c
 292e4dd73d4a837c1a06a81fa7006885 *src/version.c
 b91834f5e6c4451cdeea84e407dee779 *src/winidn.c
 0cc271334c5be6c7b13bf4dcabf18ba6 *src/writer.c
-363571f48003b653997d6901c1844727 *tests/engine.R
-41dc6de9e30a19e502e01e699c9c07c4 *tests/engine.Rout.save
 0622a97a2aaa3c342f09636052c2d7f5 *tests/spelling.R
 53c61f84653136400af01616e5ba0abd *tests/testthat.R
 c97d6b3c39ebc805b223a643fea7d8a8 *tests/testthat/helper-version.R
