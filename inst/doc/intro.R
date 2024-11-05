@@ -48,10 +48,12 @@ cat(out, sep = "\n")
 
 ## ---------------------------------------------------------------------------------------------------------------------
 pool <- new_pool()
-cb <- function(req){cat("done:", req$url, ": HTTP:", req$status, "\n")}
-curl_fetch_multi('https://www.google.com', done = cb, pool = pool)
-curl_fetch_multi('https://cloud.r-project.org', done = cb, pool = pool)
-curl_fetch_multi('https://hb.cran.dev/blabla', done = cb, pool = pool)
+success <- function(req){cat("success:", req$url, ": HTTP:", req$status, "\n")}
+failure <- function(err){cat("failure:", err, "\n")}
+curl_fetch_multi('https://www.google.com', done = success, fail = failure, pool = pool)
+curl_fetch_multi('https://cloud.r-project.org', done = success, fail = failure, pool = pool)
+curl_fetch_multi('https://hb.cran.dev/blabla', done = success, fail = failure, pool = pool)
+curl_fetch_multi('https://doesnotexit.xyz', done = success, fail = failure, pool = pool)
 
 ## ---------------------------------------------------------------------------------------------------------------------
 # This actually performs requests:

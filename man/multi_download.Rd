@@ -9,13 +9,14 @@ multi_download(
   destfiles = NULL,
   resume = FALSE,
   progress = TRUE,
-  timeout = Inf,
+  multi_timeout = Inf,
   multiplex = FALSE,
   ...
 )
 }
 \arguments{
-\item{urls}{vector with files to download}
+\item{urls}{vector with URLs to download. Alternatively it may also be a
+list of \link[=new_handle]{handle} objects that have the \code{url} option already set.}
 
 \item{destfiles}{vector (of equal length as \code{urls}) with paths of output files,
 or \code{NULL} to use \link{basename} of urls.}
@@ -25,7 +26,7 @@ change server responses, see details.}
 
 \item{progress}{print download progress information}
 
-\item{timeout}{in seconds, passed to \link{multi_run}}
+\item{multi_timeout}{in seconds, passed to \link{multi_run}}
 
 \item{multiplex}{passed to \link{new_pool}}
 
@@ -65,7 +66,7 @@ The \code{success} column indicates if a request was successfully completed (reg
 of the HTTP status code). If it failed, e.g. due to a networking issue, the error
 message is in the \code{error} column. A \code{success} value \code{NA} indicates that the request
 was still in progress when the function was interrupted or reached the elapsed
-\code{timeout} and perhaps the download can be resumed if the server supports it.
+\code{multi_timeout} and perhaps the download can be resumed if the server supports it.
 
 It is also important to inspect the \code{status_code} column to see if any of the
 requests were successful but had a non-success HTTP code, and hence the downloaded
