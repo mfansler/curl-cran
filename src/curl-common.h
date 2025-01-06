@@ -8,7 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define make_string(x) x ? Rf_mkString(x) : Rf_ScalarString(NA_STRING)
+#define make_string(x) x != NULL ? Rf_mkString(x) : Rf_ScalarString(NA_STRING)
 #define get_string(x) CHAR(STRING_ELT(x, 0))
 #define assert(x) assert_message(x, NULL)
 
@@ -21,6 +21,10 @@
 
 #if AT_LEAST_CURL(7, 62)
 #define HAS_CURL_PARSER 1
+#endif
+
+#if AT_LEAST_CURL(7, 67)
+#define HAS_MAX_STREAMS 1
 #endif
 
 #if AT_LEAST_CURL(7, 72)

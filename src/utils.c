@@ -1,6 +1,19 @@
 #include "curl-common.h"
 #include <stdint.h> /* SIZE_MAX */
 
+#ifdef _WIN32
+#include <Rembedded.h>
+void send_r_interrupt(void) {
+  UserBreak = 1;
+  R_CheckUserInterrupt();
+}
+#else
+#include <Rinterface.h>
+void send_r_interrupt(void) {
+  Rf_onintr();
+}
+#endif
+
 CURL* get_handle(SEXP ptr){
   return get_ref(ptr)->handle;
 }
@@ -40,19 +53,24 @@ void reset_errbuf(reference *ref){
 void assert_message(CURLcode res, const char *str){
   if(res == CURLE_OK)
     return;
+  if(res == CURLE_ABORTED_BY_CALLBACK)
+    send_r_interrupt();
   if(str == NULL)
     str = curl_easy_strerror(res);
   SEXP code = PROTECT(Rf_ScalarInteger(res));
   SEXP message = PROTECT(make_string(str));
   SEXP expr = PROTECT(Rf_install("raise_libcurl_error"));
   SEXP call = PROTECT(Rf_lang3(expr, code, message));
-  Rf_eval(call, R_FindNamespace(Rf_mkString("curl")));
-  UNPROTECT(4);
+  SEXP env = PROTECT(R_FindNamespace(Rf_mkString("curl")));
+  Rf_eval(call, env);
+  UNPROTECT(5); //never happens
 }
 
 void assert_status(CURLcode res, reference *ref){
   if(res == CURLE_OK)
     return;
+  if(res == CURLE_ABORTED_BY_CALLBACK)
+    send_r_interrupt();
   const char *source_url = NULL;
   curl_easy_getinfo(ref->handle, CURLINFO_EFFECTIVE_URL, &source_url);
   SEXP url = PROTECT(make_string(source_url));
@@ -61,8 +79,9 @@ void assert_status(CURLcode res, reference *ref){
   SEXP errbuf = PROTECT(make_string(ref->errbuf));
   SEXP expr = PROTECT(Rf_install("raise_libcurl_error"));
   SEXP call = PROTECT(Rf_lang5(expr, code, message, errbuf, url));
-  Rf_eval(call, R_FindNamespace(Rf_mkString("curl")));
-  UNPROTECT(6);
+  SEXP env = PROTECT(R_FindNamespace(Rf_mkString("curl")));
+  Rf_eval(call, env);
+  UNPROTECT(7); //never happens
 }
 
 void massert(CURLMcode res){
