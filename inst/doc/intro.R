@@ -36,15 +36,15 @@ close(con)
 cat(out, sep = "\n")
 
 ## ----eval=FALSE-------------------------------------------------------------------------------------------------------
-#  # This httpbin mirror doesn't cache
-#  con <- curl("https://nghttp2.org/httpbin/drip?duration=1&numbytes=50")
-#  open(con, "rb", blocking = FALSE)
-#  while(isIncomplete(con)){
-#    buf <- readBin(con, raw(), 1024)
-#    if(length(buf))
-#      cat("received: ", rawToChar(buf), "\n")
-#  }
-#  close(con)
+# # This httpbin mirror doesn't cache
+# con <- curl("https://nghttp2.org/httpbin/drip?duration=1&numbytes=50")
+# open(con, "rb", blocking = FALSE)
+# while(isIncomplete(con)){
+#   buf <- readBin(con, raw(), 1024)
+#   if(length(buf))
+#     cat("received: ", rawToChar(buf), "\n")
+# }
+# close(con)
 
 ## ---------------------------------------------------------------------------------------------------------------------
 pool <- new_pool()
@@ -96,11 +96,13 @@ handle_setheaders(h,
 handle <- new_handle(verbose = TRUE)
 
 ## ----error = TRUE-----------------------------------------------------------------------------------------------------
+try({
 # URLOPT_MASFILESIZE must be a number
 handle_setopt(handle, maxfilesize = "foo")
 
 # CURLOPT_USERAGENT must be a string
 handle_setopt(handle, useragent = 12345)
+})
 
 ## ---------------------------------------------------------------------------------------------------------------------
 curl::curl_symbols("CURLUSESSL")
