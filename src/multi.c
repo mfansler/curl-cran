@@ -170,12 +170,7 @@ SEXP R_multi_run(SEXP pool_ptr, SEXP timeout, SEXP max){
         } else {
           total_fail++;
           if(Rf_isFunction(cb_error)){
-            int arglen = Rf_length(FORMALS(cb_error));
-            SEXP buf = PROTECT(Rf_mkString(strlen(ref->errbuf) ? ref->errbuf : curl_easy_strerror(status)));
-            SEXP call = PROTECT(Rf_lcons(cb_error, arglen ? Rf_lcons(buf, R_NilValue) : R_NilValue));
-            //R_tryEval(call, R_GlobalEnv, &cbfail);
-            Rf_eval(call, R_GlobalEnv); //OK to error here
-            UNPROTECT(2);
+            raise_libcurl_error(status, ref, cb_error);
           }
         }
         UNPROTECT(4);
@@ -188,7 +183,7 @@ SEXP R_multi_run(SEXP pool_ptr, SEXP timeout, SEXP max){
     R_CheckUserInterrupt();
 
     /* check for timeout or max result*/
-    if(result_max > 0 && total_success + total_fail >= result_max)
+    if(total_pending > 0 && result_max > 0 && total_success + total_fail >= result_max)
       break;
     if(time_max == 0 && total_pending != -1)
       break;
